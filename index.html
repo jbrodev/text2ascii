@@ -17,8 +17,6 @@
       max-width: 960px;
     }
 
-    h1 { font-size: 14px; font-weight: normal; margin-bottom: 0; }
-
     .banner-pre {
       font-size: 11px;
       line-height: 1.2;
@@ -30,9 +28,7 @@
 
     label { display: inline-block; margin-bottom: 4px; }
 
-    input[type="text"],
-    input[type="number"],
-    select {
+    input[type="text"], select {
       font-family: 'Courier New', Courier, monospace;
       font-size: 13px;
       border: 1px solid #000;
@@ -42,11 +38,10 @@
     }
 
     input[type="text"] { width: 400px; }
-    input[type="number"] { width: 70px; }
     select { padding: 3px 4px; }
 
     .row { margin-bottom: 10px; }
-    .row label { min-width: 100px; display: inline-block; vertical-align: middle; }
+    .row > label { min-width: 100px; display: inline-block; vertical-align: middle; }
 
     .radio-group { display: inline-block; vertical-align: middle; }
     .radio-group label { min-width: auto; margin-right: 16px; cursor: pointer; }
@@ -65,8 +60,10 @@
     button:hover { background: #000; color: #fff; }
     button:active { background: #555; color: #fff; }
 
+    .section-title { font-weight: bold; margin-bottom: 8px; margin-top: 4px; }
+
     #output-section { margin-top: 20px; }
-    #output-section label { display: block; margin-bottom: 6px; font-weight: bold; }
+    #output-section > .section-title { margin-bottom: 6px; }
 
     pre#output {
       font-family: 'Courier New', Courier, monospace;
@@ -79,7 +76,7 @@
       white-space: pre;
       overflow-x: auto;
       overflow-y: auto;
-      max-height: 600px;
+      max-height: 500px;
     }
 
     #status {
@@ -91,7 +88,36 @@
     #status.error { color: #c00; }
     #status.ok { color: #060; }
 
-    .section-title { font-weight: bold; margin-bottom: 8px; }
+    /* Terminal commands section */
+    #commands-section { margin-top: 24px; display: none; }
+    #commands-section.visible { display: block; }
+
+    .cmd-block { margin-bottom: 14px; }
+    .cmd-label { font-size: 12px; color: #555; margin-bottom: 4px; }
+
+    pre.cmd {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      background: #f5f5f5;
+      border: 1px solid #ccc;
+      padding: 8px 10px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-bottom: 4px;
+    }
+
+    .shell-tabs { margin-bottom: 12px; }
+    .shell-tab {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      border: 1px solid #000;
+      background: #fff;
+      padding: 2px 10px;
+      cursor: pointer;
+      margin-right: 4px;
+    }
+    .shell-tab.active { background: #000; color: #fff; }
+
     .instructions { margin: 12px 0; padding-left: 16px; line-height: 2; }
     .instructions li { list-style: none; }
     .instructions li::before { content: "> "; }
@@ -99,7 +125,6 @@
     a { color: #000; }
     a:hover { background: #000; color: #fff; text-decoration: none; }
 
-    /* Font dropdown hidden when in unicode mode */
     #font-row.hidden { visibility: hidden; }
   </style>
 </head>
@@ -130,6 +155,7 @@
   <span class="radio-group">
     <label><input type="radio" name="mode" value="figlet" id="modeFiglet" checked> ASCII art (figlet)</label>
     <label><input type="radio" name="mode" value="unicode" id="modeUnicode"> Unicode blocks (█)</label>
+    <label><input type="radio" name="mode" value="unicode3d" id="modeUnicode3d"> Unicode 3D (█░)</label>
   </span>
 </div>
 
@@ -155,32 +181,73 @@
 </div>
 
 <div class="row">
-  <label for="widthInput">Width:</label>
-  <input type="number" id="widthInput" value="80" min="20" max="200">
-  <span style="margin-left:8px;color:#444;font-size:12px">characters</span>
+  <label for="colorSelect">Color:</label>
+  <select id="colorSelect">
+    <option value="">none</option>
+    <option value="red">red</option>
+    <option value="green">green</option>
+    <option value="yellow">yellow</option>
+    <option value="blue">blue</option>
+    <option value="magenta">magenta</option>
+    <option value="cyan">cyan</option>
+    <option value="white">white</option>
+    <option value="bright_red">bright red</option>
+    <option value="bright_green">bright green</option>
+    <option value="bright_yellow">bright yellow</option>
+    <option value="bright_blue">bright blue</option>
+    <option value="bright_magenta">bright magenta</option>
+    <option value="bright_cyan">bright cyan</option>
+  </select>
+  <span style="margin-left:8px;font-size:12px;color:#888;">(color applies in terminal only)</span>
 </div>
 
 <div class="row" style="margin-top:14px;">
-  <button id="btnConvert" onclick="convertText()">[ Convert ]</button>
+  <button onclick="convertText()">[ Convert ]</button>
   <button onclick="copyOutput()">[ Copy to Clipboard ]</button>
   <button onclick="downloadOutput()">[ Download .txt ]</button>
 </div>
 
 <div id="output-section">
-  <label for="output">OUTPUT:</label>
+  <div class="section-title">OUTPUT:</div>
   <pre id="output">-- result will appear here --</pre>
   <div id="status"></div>
+</div>
+
+<!-- Terminal commands — shown after conversion -->
+<div id="commands-section">
+  <hr>
+  <div class="section-title">TERMINAL COMMANDS</div>
+  <p style="font-size:12px;color:#555;margin-bottom:10px;">
+    Copy the command for your shell to display this banner in your terminal.
+  </p>
+
+  <div class="shell-tabs">
+    <button class="shell-tab active" onclick="setShell('bash')" id="tab-bash">Bash / Zsh</button>
+    <button class="shell-tab" onclick="setShell('powershell')" id="tab-powershell">PowerShell</button>
+    <button class="shell-tab" onclick="setShell('fish')" id="tab-fish">Fish</button>
+  </div>
+
+  <div class="cmd-block">
+    <div class="cmd-label">&#x25B6; Run once (this session):</div>
+    <pre class="cmd" id="cmd-session"></pre>
+    <button onclick="copyCmd('cmd-session')">[ Copy ]</button>
+  </div>
+
+  <div class="cmd-block">
+    <div class="cmd-label">&#x25B6; Save permanently (runs every time you open a terminal):</div>
+    <pre class="cmd" id="cmd-permanent"></pre>
+    <button onclick="copyCmd('cmd-permanent')">[ Copy ]</button>
+  </div>
 </div>
 
 <hr>
 
 <div class="section-title">NOTES</div>
 <ul class="instructions">
-  <li>Copy the result and paste it into your terminal, shell script, or README.</li>
-  <li>For terminal use, make sure your font supports Unicode (try Consolas, Fira Code, or Cascadia Code).</li>
-  <li>ASCII art mode requires an internet connection on first use to load fonts from CDN.</li>
-  <li>Unicode block mode works fully offline.</li>
-  <li>Install the CLI tool: <code>pip install git+https://github.com/jbrodev/text2ascii.git</code></li>
+  <li>Color only applies in the terminal — it won't show in the output preview above.</li>
+  <li>For Unicode modes, make sure your terminal font supports block chars (Consolas, Fira Code, Cascadia Code).</li>
+  <li>ASCII art mode loads fonts from CDN — requires internet on first use per font.</li>
+  <li>Install the CLI: <code>pip install git+https://github.com/jbrodev/text2ascii.git</code></li>
 </ul>
 
 <hr>
@@ -189,162 +256,148 @@
   <a href="https://github.com/jbrodev/text2ascii">github.com/jbrodev/text2ascii</a>
 </p>
 
-<!-- figlet.js: UMD browser build from jsDelivr CDN -->
 <script src="https://cdn.jsdelivr.net/npm/figlet@1.8.0/lib/figlet.js"></script>
 
 <script>
 // ---------------------------------------------------------------------------
-// Unicode block renderer (mirrors text2ascii/unicode_renderer.py)
-// 5x7 pixel bitmaps, MSB = leftmost pixel
+// Unicode block renderer — 5x7 pixel bitmaps, MSB = leftmost pixel
 // ---------------------------------------------------------------------------
-const CHAR_HEIGHT = 7;
-const CHAR_WIDTH  = 5;
-const CHAR_GAP    = 1;
+const CHAR_HEIGHT = 7, CHAR_WIDTH = 5, CHAR_GAP = 1;
 
 const PIXEL_MAP = {
-  "A": [0b01110,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001],
-  "B": [0b11110,0b10001,0b10001,0b11110,0b10001,0b10001,0b11110],
-  "C": [0b01110,0b10001,0b10000,0b10000,0b10000,0b10001,0b01110],
-  "D": [0b11110,0b10001,0b10001,0b10001,0b10001,0b10001,0b11110],
-  "E": [0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b11111],
-  "F": [0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b10000],
-  "G": [0b01110,0b10001,0b10000,0b10111,0b10001,0b10001,0b01110],
-  "H": [0b10001,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001],
-  "I": [0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b11111],
-  "J": [0b11111,0b00010,0b00010,0b00010,0b00010,0b10010,0b01100],
-  "K": [0b10001,0b10010,0b10100,0b11000,0b10100,0b10010,0b10001],
-  "L": [0b10000,0b10000,0b10000,0b10000,0b10000,0b10000,0b11111],
-  "M": [0b10001,0b11011,0b10101,0b10001,0b10001,0b10001,0b10001],
-  "N": [0b10001,0b11001,0b10101,0b10011,0b10001,0b10001,0b10001],
-  "O": [0b01110,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110],
-  "P": [0b11110,0b10001,0b10001,0b11110,0b10000,0b10000,0b10000],
-  "Q": [0b01110,0b10001,0b10001,0b10001,0b10101,0b10010,0b01101],
-  "R": [0b11110,0b10001,0b10001,0b11110,0b10100,0b10010,0b10001],
-  "S": [0b01110,0b10001,0b10000,0b01110,0b00001,0b10001,0b01110],
-  "T": [0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b00100],
-  "U": [0b10001,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110],
-  "V": [0b10001,0b10001,0b10001,0b10001,0b10001,0b01010,0b00100],
-  "W": [0b10001,0b10001,0b10001,0b10001,0b10101,0b11011,0b10001],
-  "X": [0b10001,0b10001,0b01010,0b00100,0b01010,0b10001,0b10001],
-  "Y": [0b10001,0b10001,0b01010,0b00100,0b00100,0b00100,0b00100],
-  "Z": [0b11111,0b00001,0b00010,0b00100,0b01000,0b10000,0b11111],
-  "0": [0b01110,0b10001,0b10011,0b10101,0b11001,0b10001,0b01110],
-  "1": [0b00100,0b01100,0b00100,0b00100,0b00100,0b00100,0b11111],
-  "2": [0b01110,0b10001,0b00001,0b00010,0b00100,0b01000,0b11111],
-  "3": [0b11111,0b00010,0b00100,0b00110,0b00001,0b10001,0b01110],
-  "4": [0b00010,0b00110,0b01010,0b10010,0b11111,0b00010,0b00010],
-  "5": [0b11111,0b10000,0b11110,0b00001,0b00001,0b10001,0b01110],
-  "6": [0b01110,0b10000,0b10000,0b11110,0b10001,0b10001,0b01110],
-  "7": [0b11111,0b00001,0b00010,0b00100,0b01000,0b01000,0b01000],
-  "8": [0b01110,0b10001,0b10001,0b01110,0b10001,0b10001,0b01110],
-  "9": [0b01110,0b10001,0b10001,0b01111,0b00001,0b00001,0b01110],
-  " ": [0b00000,0b00000,0b00000,0b00000,0b00000,0b00000,0b00000],
-  "!": [0b00100,0b00100,0b00100,0b00100,0b00000,0b00000,0b00100],
-  ".": [0b00000,0b00000,0b00000,0b00000,0b00000,0b00000,0b00100],
-  "?": [0b01110,0b10001,0b00001,0b00010,0b00100,0b00000,0b00100],
-  "-": [0b00000,0b00000,0b00000,0b11111,0b00000,0b00000,0b00000],
-  "_": [0b00000,0b00000,0b00000,0b00000,0b00000,0b00000,0b11111],
-  "'": [0b00100,0b00100,0b00000,0b00000,0b00000,0b00000,0b00000],
-  "(": [0b00010,0b00100,0b01000,0b01000,0b01000,0b00100,0b00010],
-  ")": [0b01000,0b00100,0b00010,0b00010,0b00010,0b00100,0b01000],
-  "/": [0b00001,0b00010,0b00010,0b00100,0b01000,0b01000,0b10000],
-  "@": [0b01110,0b10001,0b10111,0b10101,0b10111,0b10000,0b01110],
-  "#": [0b01010,0b01010,0b11111,0b01010,0b11111,0b01010,0b01010],
-  "+": [0b00000,0b00100,0b00100,0b11111,0b00100,0b00100,0b00000],
-  "=": [0b00000,0b00000,0b11111,0b00000,0b11111,0b00000,0b00000],
-  "*": [0b00000,0b10101,0b01110,0b11111,0b01110,0b10101,0b00000],
-  ":": [0b00000,0b00100,0b00000,0b00000,0b00000,0b00100,0b00000],
-  ",": [0b00000,0b00000,0b00000,0b00000,0b00000,0b00100,0b01000],
-  "&": [0b01100,0b10010,0b10100,0b01000,0b10101,0b10010,0b01101],
-  "%": [0b11000,0b11001,0b00010,0b00100,0b01000,0b10011,0b00011],
-  "$": [0b00100,0b01111,0b10100,0b01110,0b00101,0b11110,0b00100],
-  "|": [0b00100,0b00100,0b00100,0b00100,0b00100,0b00100,0b00100],
+  "A":[0b01110,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001],
+  "B":[0b11110,0b10001,0b10001,0b11110,0b10001,0b10001,0b11110],
+  "C":[0b01110,0b10001,0b10000,0b10000,0b10000,0b10001,0b01110],
+  "D":[0b11110,0b10001,0b10001,0b10001,0b10001,0b10001,0b11110],
+  "E":[0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b11111],
+  "F":[0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b10000],
+  "G":[0b01110,0b10001,0b10000,0b10111,0b10001,0b10001,0b01110],
+  "H":[0b10001,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001],
+  "I":[0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b11111],
+  "J":[0b11111,0b00010,0b00010,0b00010,0b00010,0b10010,0b01100],
+  "K":[0b10001,0b10010,0b10100,0b11000,0b10100,0b10010,0b10001],
+  "L":[0b10000,0b10000,0b10000,0b10000,0b10000,0b10000,0b11111],
+  "M":[0b10001,0b11011,0b10101,0b10001,0b10001,0b10001,0b10001],
+  "N":[0b10001,0b11001,0b10101,0b10011,0b10001,0b10001,0b10001],
+  "O":[0b01110,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110],
+  "P":[0b11110,0b10001,0b10001,0b11110,0b10000,0b10000,0b10000],
+  "Q":[0b01110,0b10001,0b10001,0b10001,0b10101,0b10010,0b01101],
+  "R":[0b11110,0b10001,0b10001,0b11110,0b10100,0b10010,0b10001],
+  "S":[0b01110,0b10001,0b10000,0b01110,0b00001,0b10001,0b01110],
+  "T":[0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b00100],
+  "U":[0b10001,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110],
+  "V":[0b10001,0b10001,0b10001,0b10001,0b10001,0b01010,0b00100],
+  "W":[0b10001,0b10001,0b10001,0b10001,0b10101,0b11011,0b10001],
+  "X":[0b10001,0b10001,0b01010,0b00100,0b01010,0b10001,0b10001],
+  "Y":[0b10001,0b10001,0b01010,0b00100,0b00100,0b00100,0b00100],
+  "Z":[0b11111,0b00001,0b00010,0b00100,0b01000,0b10000,0b11111],
+  "0":[0b01110,0b10001,0b10011,0b10101,0b11001,0b10001,0b01110],
+  "1":[0b00100,0b01100,0b00100,0b00100,0b00100,0b00100,0b11111],
+  "2":[0b01110,0b10001,0b00001,0b00010,0b00100,0b01000,0b11111],
+  "3":[0b11111,0b00010,0b00100,0b00110,0b00001,0b10001,0b01110],
+  "4":[0b00010,0b00110,0b01010,0b10010,0b11111,0b00010,0b00010],
+  "5":[0b11111,0b10000,0b11110,0b00001,0b00001,0b10001,0b01110],
+  "6":[0b01110,0b10000,0b10000,0b11110,0b10001,0b10001,0b01110],
+  "7":[0b11111,0b00001,0b00010,0b00100,0b01000,0b01000,0b01000],
+  "8":[0b01110,0b10001,0b10001,0b01110,0b10001,0b10001,0b01110],
+  "9":[0b01110,0b10001,0b10001,0b01111,0b00001,0b00001,0b01110],
+  " ":[0,0,0,0,0,0,0],
+  "!":[0b00100,0b00100,0b00100,0b00100,0b00000,0b00000,0b00100],
+  ".":[0,0,0,0,0,0,0b00100],
+  "?":[0b01110,0b10001,0b00001,0b00010,0b00100,0b00000,0b00100],
+  "-":[0,0,0,0b11111,0,0,0],
+  "_":[0,0,0,0,0,0,0b11111],
+  "'":[0b00100,0b00100,0,0,0,0,0],
+  "(":[0b00010,0b00100,0b01000,0b01000,0b01000,0b00100,0b00010],
+  ")":[0b01000,0b00100,0b00010,0b00010,0b00010,0b00100,0b01000],
+  "@":[0b01110,0b10001,0b10111,0b10101,0b10111,0b10000,0b01110],
+  "#":[0b01010,0b01010,0b11111,0b01010,0b11111,0b01010,0b01010],
+  "+":[0,0b00100,0b00100,0b11111,0b00100,0b00100,0],
+  "=":[0,0,0b11111,0,0b11111,0,0],
+  "*":[0,0b10101,0b01110,0b11111,0b01110,0b10101,0],
+  ":":[0,0b00100,0,0,0,0b00100,0],
+  ",":[0,0,0,0,0,0b00100,0b01000],
+  "&":[0b01100,0b10010,0b10100,0b01000,0b10101,0b10010,0b01101],
+  "%":[0b11000,0b11001,0b00010,0b00100,0b01000,0b10011,0b00011],
+  "$":[0b00100,0b01111,0b10100,0b01110,0b00101,0b11110,0b00100],
+  "|":[0b00100,0b00100,0b00100,0b00100,0b00100,0b00100,0b00100],
 };
-
 const BLANK_ROW = [0,0,0,0,0,0,0];
+
+function buildPixelGrid(text) {
+  const chars = Array.from(text);
+  const totalCols = chars.length * (CHAR_WIDTH + CHAR_GAP) - CHAR_GAP;
+  const grid = Array.from({length: CHAR_HEIGHT}, () => new Array(totalCols).fill(false));
+  let colOffset = 0;
+  for (const ch of chars) {
+    const bitmap = PIXEL_MAP[ch.toUpperCase()] || BLANK_ROW;
+    for (let r = 0; r < CHAR_HEIGHT; r++)
+      for (let b = CHAR_WIDTH - 1; b >= 0; b--)
+        grid[r][colOffset + (CHAR_WIDTH - 1 - b)] = !!((bitmap[r] >> b) & 1);
+    colOffset += CHAR_WIDTH + CHAR_GAP;
+  }
+  return grid;
+}
 
 function unicodeRenderLine(chars, on, off) {
   const rows = Array.from({length: CHAR_HEIGHT}, () => []);
   const gap = off.repeat(CHAR_GAP);
-
   for (let i = 0; i < chars.length; i++) {
-    const ch = chars[i].toUpperCase();
-    const bitmap = PIXEL_MAP[ch] || BLANK_ROW;
+    const bitmap = PIXEL_MAP[chars[i].toUpperCase()] || BLANK_ROW;
     for (let r = 0; r < CHAR_HEIGHT; r++) {
-      let rowStr = "";
-      for (let b = CHAR_WIDTH - 1; b >= 0; b--) {
-        rowStr += ((bitmap[r] >> b) & 1) ? on : off;
-      }
-      rows[r].push(rowStr);
+      let s = "";
+      for (let b = CHAR_WIDTH - 1; b >= 0; b--)
+        s += ((bitmap[r] >> b) & 1) ? on : off;
+      rows[r].push(s);
     }
-    if (i < chars.length - 1) {
-      for (let r = 0; r < CHAR_HEIGHT; r++) {
-        rows[r].push(gap);
-      }
-    }
+    if (i < chars.length - 1)
+      for (let r = 0; r < CHAR_HEIGHT; r++) rows[r].push(gap);
   }
   return rows.map(r => r.join("")).join("\n");
 }
 
-function unicodeRender(text, width) {
+function unicodeRender(text) {
   if (!text) return "";
-  const on = "\u2588"; // █
-  const off = " ";
-  const charRenderWidth = CHAR_WIDTH + CHAR_GAP;
-  const lines = [];
+  return unicodeRenderLine(Array.from(text), "\u2588", " ");
+}
 
-  // Simple word wrap
-  const words = text.split(/\s+/).filter(w => w.length > 0);
-  let currentWords = [];
-  let currentWidth = 0;
-
-  for (const word of words) {
-    const wordWidth = word.length * charRenderWidth - CHAR_GAP;
-    const needed = currentWords.length === 0
-      ? wordWidth
-      : currentWidth + charRenderWidth + wordWidth; // space char between words
-
-    if (currentWords.length > 0 && needed > width) {
-      lines.push(unicodeRenderLine(Array.from(currentWords.join(" ")), on, off));
-      lines.push("");
-      currentWords = [word];
-      currentWidth = wordWidth;
-    } else {
-      currentWords.push(word);
-      currentWidth = needed;
-    }
-  }
-
-  if (currentWords.length > 0) {
-    lines.push(unicodeRenderLine(Array.from(currentWords.join(" ")), on, off));
-  }
-
-  return lines.join("\n");
+function unicodeRender3d(text, depth) {
+  depth = depth || 1;
+  if (!text) return "";
+  const grid = buildPixelGrid(text);
+  const rows = grid.length, cols = grid[0].length;
+  const cR = rows + depth, cC = cols + depth;
+  const canvas = Array.from({length: cR}, () => new Array(cC).fill(0));
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      if (grid[r][c]) { canvas[r+depth][c+depth] |= 1; canvas[r][c] |= 2; }
+  const map = {0:" ", 1:"\u2591", 2:"\u2588", 3:"\u2593"};
+  return canvas.map(row => row.map(v => map[v]).join("").trimEnd()).join("\n");
 }
 
 // ---------------------------------------------------------------------------
-// figlet.js font loading
+// figlet font loading
 // ---------------------------------------------------------------------------
-const FIGLET_FONTS = [
-  "Standard","Big","Banner","Block","Doom","Slant","Small","3-D",
-  "Bloody","Broadway","Bulbhead","Digital","Epic","Graffiti","Larry 3D"
-];
 const loadedFonts = new Set();
-
 function loadFigletFont(fontName, callback) {
-  if (loadedFonts.has(fontName)) {
-    callback(null);
-    return;
-  }
-  if (typeof figlet === "undefined") {
-    callback(new Error("figlet.js not loaded. Check your internet connection."));
-    return;
-  }
+  if (loadedFonts.has(fontName)) { callback(null); return; }
+  if (typeof figlet === "undefined") { callback(new Error("figlet.js not loaded.")); return; }
   figlet.defaults({ fontPath: "https://cdn.jsdelivr.net/npm/figlet@1.8.0/fonts" });
   figlet.preloadFonts([fontName], function(err) {
     if (!err) loadedFonts.add(fontName);
     callback(err);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Shell state
+// ---------------------------------------------------------------------------
+let currentShell = "bash";
+function setShell(shell) {
+  currentShell = shell;
+  document.querySelectorAll(".shell-tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("tab-" + shell).classList.add("active");
+  updateCommands();
 }
 
 // ---------------------------------------------------------------------------
@@ -360,127 +413,147 @@ function getMode() {
   return document.querySelector('input[name="mode"]:checked').value;
 }
 
-// Toggle font dropdown visibility based on mode
-document.querySelectorAll('input[name="mode"]').forEach(function(radio) {
-  radio.addEventListener("change", function() {
-    document.getElementById("font-row").classList.toggle("hidden", getMode() === "unicode");
+document.querySelectorAll('input[name="mode"]').forEach(function(r) {
+  r.addEventListener("change", function() {
+    const isFiglet = getMode() === "figlet";
+    document.getElementById("font-row").classList.toggle("hidden", !isFiglet);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Main convert function
+// Build the CLI command string from current selections
+// ---------------------------------------------------------------------------
+function buildCliCommand() {
+  const text   = document.getElementById("inputText").value.trim();
+  const mode   = getMode();
+  const font   = document.getElementById("fontSelect").value;
+  const color  = document.getElementById("colorSelect").value;
+
+  if (!text) return null;
+
+  let cmd = "text2ascii " + JSON.stringify(text);
+  if (mode === "figlet" && font !== "Standard") cmd += " --font " + JSON.stringify(font);
+  if (mode === "unicode")   cmd += " --unicode";
+  if (mode === "unicode3d") cmd += " --3d";
+  if (color) cmd += " --color " + color;
+  return cmd;
+}
+
+// ---------------------------------------------------------------------------
+// Update the terminal commands section
+// ---------------------------------------------------------------------------
+function updateCommands() {
+  const cmd = buildCliCommand();
+  if (!cmd) return;
+
+  let sessionCmd, permanentCmd;
+
+  if (currentShell === "bash") {
+    sessionCmd   = cmd;
+    permanentCmd = "echo '" + cmd + "' >> ~/.bashrc && source ~/.bashrc";
+  } else if (currentShell === "powershell") {
+    sessionCmd   = cmd;
+    permanentCmd = 'Add-Content -Path $PROFILE -Value \'' + cmd + '\'';
+  } else if (currentShell === "fish") {
+    sessionCmd   = cmd;
+    permanentCmd = "echo '" + cmd + "' >> ~/.config/fish/config.fish";
+  }
+
+  document.getElementById("cmd-session").textContent   = sessionCmd;
+  document.getElementById("cmd-permanent").textContent = permanentCmd;
+  document.getElementById("commands-section").classList.add("visible");
+}
+
+// ---------------------------------------------------------------------------
+// Convert
 // ---------------------------------------------------------------------------
 function convertText() {
   const text = document.getElementById("inputText").value.trim();
-  if (!text) {
-    setStatus("Please enter some text first.", "error");
-    return;
-  }
+  if (!text) { setStatus("Please enter some text first.", "error"); return; }
 
-  const width = parseInt(document.getElementById("widthInput").value, 10) || 80;
   const mode = getMode();
-
   setStatus("Converting...");
   document.getElementById("output").textContent = "...";
 
   if (mode === "unicode") {
-    try {
-      const result = unicodeRender(text, width);
-      document.getElementById("output").textContent = result || "(empty output)";
-      setStatus("Done.", "ok");
-    } catch(e) {
-      setStatus("Error: " + e.message, "error");
-    }
+    document.getElementById("output").textContent = unicodeRender(text) || "(empty)";
+    setStatus("Done.", "ok");
+    updateCommands();
+    return;
+  }
+
+  if (mode === "unicode3d") {
+    document.getElementById("output").textContent = unicodeRender3d(text) || "(empty)";
+    setStatus("Done.", "ok");
+    updateCommands();
     return;
   }
 
   // figlet mode
-  const font = document.getElementById("fontSelect").value;
-
+  let font = document.getElementById("fontSelect").value;
   loadFigletFont(font, function(loadErr) {
-    if (loadErr) {
-      // Fallback: try Standard font
-      setStatus("Could not load font '" + font + "'. Trying Standard... (check internet connection)", "error");
-      font = "Standard";
-    }
-
-    if (typeof figlet === "undefined") {
-      document.getElementById("output").textContent = "(error)";
-      setStatus("figlet.js failed to load. Check your internet connection.", "error");
-      return;
-    }
-
-    figlet.text(text, { font: font, width: width }, function(err, result) {
-      if (err) {
-        document.getElementById("output").textContent = "(error)";
-        setStatus("figlet error: " + err.message, "error");
-        return;
-      }
-      document.getElementById("output").textContent = result || "(empty output)";
+    if (loadErr) { font = "Standard"; setStatus("Font load failed, using Standard.", "error"); }
+    figlet.text(text, { font: font }, function(err, result) {
+      if (err) { setStatus("figlet error: " + err.message, "error"); return; }
+      document.getElementById("output").textContent = result || "(empty)";
       setStatus("Done.", "ok");
+      updateCommands();
     });
   });
 }
 
 // ---------------------------------------------------------------------------
-// Copy to clipboard
+// Copy output / commands
 // ---------------------------------------------------------------------------
-function copyOutput() {
-  const text = document.getElementById("output").textContent;
-  if (!text || text === "-- result will appear here --") {
-    setStatus("Nothing to copy yet.", "error");
-    return;
-  }
+function _writeToClipboard(text, label) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(function() {
-      setStatus("Copied to clipboard!", "ok");
-    }).catch(function() {
-      _fallbackCopy(text);
-    });
+      setStatus("Copied " + label + "!", "ok");
+    }).catch(function() { _fallbackCopy(text, label); });
   } else {
-    _fallbackCopy(text);
+    _fallbackCopy(text, label);
   }
 }
 
-function _fallbackCopy(text) {
+function _fallbackCopy(text, label) {
   const ta = document.createElement("textarea");
   ta.value = text;
-  ta.style.position = "fixed";
-  ta.style.opacity = "0";
+  ta.style.cssText = "position:fixed;opacity:0";
   document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
-  try {
-    document.execCommand("copy");
-    setStatus("Copied to clipboard!", "ok");
-  } catch(e) {
-    setStatus("Copy failed. Please select and copy manually.", "error");
-  }
+  ta.focus(); ta.select();
+  try { document.execCommand("copy"); setStatus("Copied " + label + "!", "ok"); }
+  catch(e) { setStatus("Copy failed — please select and copy manually.", "error"); }
   document.body.removeChild(ta);
 }
 
+function copyOutput() {
+  const text = document.getElementById("output").textContent;
+  if (!text || text === "-- result will appear here --") { setStatus("Nothing to copy yet.", "error"); return; }
+  _writeToClipboard(text, "output");
+}
+
+function copyCmd(id) {
+  const text = document.getElementById(id).textContent;
+  if (!text) { setStatus("Convert first.", "error"); return; }
+  _writeToClipboard(text, "command");
+}
+
 // ---------------------------------------------------------------------------
-// Download as .txt
+// Download
 // ---------------------------------------------------------------------------
 function downloadOutput() {
   const text = document.getElementById("output").textContent;
-  if (!text || text === "-- result will appear here --") {
-    setStatus("Nothing to download yet.", "error");
-    return;
-  }
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
+  if (!text || text === "-- result will appear here --") { setStatus("Nothing to download yet.", "error"); return; }
   const a = document.createElement("a");
-  a.href = url;
+  a.href = URL.createObjectURL(new Blob([text], {type:"text/plain;charset=utf-8"}));
   a.download = "ascii_art.txt";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(a.href);
   setStatus("Downloaded as ascii_art.txt", "ok");
 }
 
-// Enter key triggers convert
 document.getElementById("inputText").addEventListener("keydown", function(e) {
   if (e.key === "Enter") convertText();
 });
