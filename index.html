@@ -248,6 +248,7 @@
   <li>For Unicode modes, make sure your terminal font supports block chars (Consolas, Fira Code, Cascadia Code).</li>
   <li>ASCII art mode loads fonts from CDN — requires internet on first use per font.</li>
   <li>Install the CLI: <code>pip install git+https://github.com/jbrodev/text2ascii.git</code></li>
+  <li>Windows: if <code>text2ascii</code> is not found after install, open a new terminal window — PATH updates require a restart.</li>
 </ul>
 
 <hr>
@@ -450,10 +451,10 @@ function updateCommands() {
 
   if (currentShell === "bash") {
     sessionCmd   = cmd;
-    permanentCmd = "echo '" + cmd + "' >> ~/.bashrc && source ~/.bashrc";
+    permanentCmd = "echo '" + cmd + "' >> ~/.bashrc\nsource ~/.bashrc";
   } else if (currentShell === "powershell") {
     sessionCmd   = cmd;
-    permanentCmd = 'Add-Content -Path $PROFILE -Value \'' + cmd + '\'';
+    permanentCmd = "# Run this once to add your banner to your PowerShell profile:\nif (!(Test-Path $PROFILE)) { New-Item -Force -ItemType File $PROFILE | Out-Null }\nAdd-Content -Path $PROFILE -Value '" + cmd + "'";
   } else if (currentShell === "fish") {
     sessionCmd   = cmd;
     permanentCmd = "echo '" + cmd + "' >> ~/.config/fish/config.fish";
