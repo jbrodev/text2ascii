@@ -20,6 +20,7 @@ import colorama
 import pyfiglet
 
 from text2ascii.unicode_renderer import render as _unicode_render, render_3d as _unicode_render_3d
+from text2ascii import patterns as _patterns
 
 # ---------------------------------------------------------------------------
 # Color name → colorama constant mapping
@@ -186,6 +187,18 @@ def save_persistent_banner(output: str, args: argparse.Namespace) -> None:
         _fatal(f"Could not write to '{profile}': {e}")
 
 
+def _save_plain(output: str, path: str) -> None:
+    """Write output to a file, stripping ANSI escape codes."""
+    import re
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", output)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(clean)
+        print(f"Saved to {path}", file=sys.stderr)
+    except OSError as e:
+        _fatal(f"Could not write to '{path}': {e}")
+
+
 def _fatal(message: str) -> None:
     """Print an error message to stderr and exit with code 1."""
     print(f"error: {message}", file=sys.stderr)
@@ -258,6 +271,32 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="COLOR",
         help=f"Colorize output. Choices: {', '.join(_VALID_COLORS)}",
     )
+    parser.add_argument(
+        "-P", "--pattern",
+        metavar="THEME",
+        help=(
+            f"Generate a random ASCII art scene. "
+            f"Themes: {', '.join(_patterns.THEMES + ['random'])}. "
+            f"Use --list-patterns to see all."
+        ),
+    )
+    parser.add_argument(
+        "--list-patterns",
+        action="store_true",
+        help="List available scene themes and exit.",
+    )
+    parser.add_argument(
+        "-r", "--rainbow",
+        action="store_true",
+        help="Apply a full-spectrum rainbow gradient (works with --pattern and banners).",
+    )
+    parser.add_argument(
+        "-H", "--height",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Scene height in lines for --pattern (default: terminal height).",
+    )
     return parser
 
 
@@ -272,9 +311,39 @@ def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
 
-    # --list-fonts: show available fonts and exit
+    # --list-fonts
     if args.list_fonts:
         list_fonts()
+        return
+
+    # --list-patterns
+    if args.list_patterns:
+        print("Available scene themes:")
+        for t in _patterns.THEMES:
+            print(f"  {t}")
+        print("  random  (picks one at random)")
+        print("\nUsage: text2ascii --pattern starry-night --rainbow")
+        return
+
+    # --pattern: generate a scene instead of converting text
+    if args.pattern:
+        term = shutil.get_terminal_size(fallback=(80, 24))
+        width  = args.width  or term.columns
+        height = args.height or max(10, term.lines - 4)
+        try:
+            lines = _patterns.generate(args.pattern, width=width, height=height)
+        except ValueError as e:
+            _fatal(str(e))
+
+        if args.rainbow:
+            output = _patterns.rainbow_colorize(lines)
+        else:
+            output = "\n".join(lines)
+
+        if args.save:
+            _save_plain(output, args.save)
+        else:
+            print(output)
         return
 
     # Get input text
@@ -294,8 +363,8 @@ def main() -> None:
     # Determine render width
     width = args.width or shutil.get_terminal_size(fallback=(80, 24)).columns
 
-    # Render
-    if args.three_d or (args.unicode and args.three_d):
+    # Render banner
+    if args.three_d:
         output = _unicode_render_3d(text, width=width)
     elif args.unicode:
         output = _unicode_render(text, width=width)
@@ -305,24 +374,15 @@ def main() -> None:
     if not output.strip():
         _fatal("Rendering produced empty output. Try a different font or input.")
 
-    # Apply color
-    if args.color:
+    # Apply rainbow or solid color
+    if args.rainbow:
+        output = _patterns.rainbow_colorize(output.splitlines())
+    elif args.color:
         output = colorize(output, args.color)
 
     # Save to file
     if args.save:
-        try:
-            with open(args.save, "w", encoding="utf-8") as f:
-                # Write without ANSI codes if colorized
-                clean = output
-                if args.color:
-                    # Strip ANSI for file output
-                    import re
-                    clean = re.sub(r"\x1b\[[0-9;]*m", "", output)
-                f.write(clean)
-            print(f"Saved to {args.save}", file=sys.stderr)
-        except OSError as e:
-            _fatal(f"Could not write to '{args.save}': {e}")
+        _save_plain(output, args.save)
 
     # Persistent: write command to shell startup file
     if args.persistent:

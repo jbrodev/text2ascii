@@ -248,6 +248,46 @@
 
 <hr>
 
+<!-- ── PATTERN GENERATOR ─────────────────────────────────────────────────── -->
+<div class="section-title">PATTERN GENERATOR</div>
+<p style="font-size:12px;color:#555;margin-bottom:10px;">
+  Generate a random ASCII art scene. Every press produces a new variation.
+</p>
+
+<div class="row">
+  <label>Theme:</label>
+  <span class="radio-group" id="theme-tabs">
+    <button class="shell-tab active" onclick="setTheme('starry-night',this)">Starry Night</button>
+    <button class="shell-tab" onclick="setTheme('garden',this)">Garden</button>
+    <button class="shell-tab" onclick="setTheme('storm',this)">Storm</button>
+    <button class="shell-tab" onclick="setTheme('forest',this)">Forest</button>
+    <button class="shell-tab" onclick="setTheme('ocean',this)">Ocean</button>
+    <button class="shell-tab" onclick="setTheme('random',this)">Random</button>
+  </span>
+</div>
+
+<div class="row">
+  <label style="vertical-align:middle;">
+    <input type="checkbox" id="rainbowCheck" style="margin-right:4px;cursor:pointer;">
+    Rainbow / Gradient
+  </label>
+</div>
+
+<div class="row" style="margin-top:8px;">
+  <button onclick="generatePattern()">[ Generate ]</button>
+  <button onclick="copyPatternOutput()">[ Copy ]</button>
+  <button onclick="downloadPattern()">[ Download .txt ]</button>
+</div>
+
+<div style="margin-top:12px;">
+  <div class="section-title" style="font-size:12px;">PATTERN OUTPUT:</div>
+  <pre id="pattern-plain" style="font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.2;border:1px solid #000;padding:12px;overflow-x:auto;white-space:pre;max-height:400px;">-- press Generate --</pre>
+  <div id="pattern-rainbow" style="display:none;font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.2;border:1px solid #000;padding:12px;overflow-x:auto;white-space:pre;max-height:400px;"></div>
+  <div id="pattern-status" style="margin-top:4px;min-height:16px;font-size:12px;color:#444;"></div>
+</div>
+
+<hr>
+
 <div class="section-title">NOTES</div>
 <ul class="instructions">
   <li>Color only applies in the terminal — it won't show in the output preview above.</li>
@@ -571,6 +611,237 @@ function downloadOutput() {
 document.getElementById("inputText").addEventListener("keydown", function(e) {
   if (e.key === "Enter") convertText();
 });
+
+// ============================================================================
+// PATTERN GENERATOR
+// ============================================================================
+
+let currentTheme = "starry-night";
+
+function setTheme(theme, btn) {
+  currentTheme = theme;
+  document.querySelectorAll("#theme-tabs .shell-tab").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+// -- Grid helpers ------------------------------------------------------------
+function _pg(w, h) { return Array.from({length:h}, ()=>Array(w).fill(" ")); }
+function _ps(g,r,c,ch) { if(r>=0&&r<g.length&&c>=0&&c<g[0].length) g[r][c]=ch; }
+function _pw(g,r,c,s) { for(let i=0;i<s.length;i++) _ps(g,r,c+i,s[i]); }
+function _pl(g) { return g.map(row=>row.join("")); }
+function _rc(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+function _ri(a,b) { return a+Math.floor(Math.random()*(b-a+1)); }
+
+// -- Starry Night ------------------------------------------------------------
+function genStarryNight(w,h) {
+  const g=_pg(w,h), stars=["*","·","+",".","°","✦","✧","'"];
+  for(let r=0;r<h-3;r++) for(let c=0;c<w;c++) if(Math.random()<0.10) _ps(g,r,c,_rc(stars));
+
+  const mr=_ri(1,3), mc=_ri(w-14,w-6);
+  const mt=_rc(["right","left","full"]);
+  if(mt==="full"){ _pw(g,mr,mc," (   ) "); _pw(g,mr+1,mc,"(  O  )"); _pw(g,mr+2,mc," (   ) "); }
+  else { _pw(g,mr,mc,"( )"); _pw(g,mr+1,mc,"(  )"); _pw(g,mr+2,mc,"( )"); }
+
+  if(Math.random()<0.55) {
+    const sr=_ri(0,3), sc=_ri(3,Math.floor(w/2)), len=_ri(7,14);
+    for(let i=0;i<len;i++) _ps(g,sr+Math.floor(i/4),sc+i,"-");
+    _ps(g,sr,sc-1,"*");
+  }
+
+  const hillRow=h-3; let x=0;
+  while(x<w) {
+    const seg=_ri(4,10);
+    if(Math.random()<0.4&&x+seg+4<w) {
+      const rise=_ri(2,5);
+      for(let i=0;i<seg>>1;i++) _ps(g,hillRow,x+i,"_");
+      _ps(g,hillRow,x+(seg>>1),"/");
+      for(let i=0;i<rise;i++) _ps(g,hillRow-1,x+(seg>>1)+1+i,"‾");
+      _ps(g,hillRow,x+(seg>>1)+rise+1,"\\");
+      for(let i=0;i<seg>>1;i++) _ps(g,hillRow,x+(seg>>1)+rise+2+i,"_");
+    } else { for(let i=0;i<seg;i++) _ps(g,hillRow,x+i,"_"); }
+    x+=seg;
+  }
+  for(let r=hillRow+1;r<h;r++) for(let c=0;c<w;c++) _ps(g,r,c,"_");
+  return _pl(g);
+}
+
+// -- Garden ------------------------------------------------------------------
+function genGarden(w,h) {
+  const g=_pg(w,h), blooms=["*","@","o","O","w","W","✿","❀"];
+  for(let r=0;r<h/2;r++) for(let c=0;c<w;c++) if(Math.random()<0.02) _ps(g,r,c,_rc([".","'","`"]));
+  const sr=_ri(1,3), sc=_ri(2,10);
+  _pw(g,sr-1,sc-1," \\|/ "); _pw(g,sr,sc-2,"--(O)--"); _pw(g,sr+1,sc-1," /|\\ ");
+  for(let i=0;i<_ri(1,3);i++) {
+    const cr=_ri(1,Math.floor(h/4)), cc=_ri(12,w-14), cl=_ri(6,12);
+    _pw(g,cr-1,cc+2,"("+"~".repeat(cl-2)+")"); _pw(g,cr,cc,"("+"~".repeat(cl)+")");
+  }
+  const groundRow=h-3, num=_ri(7,14);
+  const cols=Array.from({length:w-4},(_,i)=>i+2).sort(()=>Math.random()-0.5).slice(0,num);
+  for(const fc of cols) {
+    const sh=_ri(2,5), bloom=_rc(blooms);
+    for(let s=0;s<sh;s++) {
+      _ps(g,groundRow-1-s,fc,"|");
+      if(s===Math.floor(sh/2)) _ps(g,groundRow-1-s,fc+(Math.random()<0.5?-1:1),_rc(["/","\\"]));
+    }
+    _ps(g,groundRow-sh-1,fc,bloom);
+  }
+  for(let i=0;i<_ri(1,3);i++) _pw(g,_ri(Math.floor(h/4),h-6),_ri(2,w-5),_rc([">v<","^.^","~.~","✿"]));
+  for(let c=0;c<w;c++) _ps(g,groundRow,c,_rc(['"',"'","-","_","_","_"]));
+  for(let c=0;c<w;c++) _ps(g,groundRow+1,c,"_");
+  if(groundRow+2<h) for(let c=0;c<w;c++) _ps(g,groundRow+2,c,"_");
+  return _pl(g);
+}
+
+// -- Storm -------------------------------------------------------------------
+function genStorm(w,h) {
+  const g=_pg(w,h), cloudCols=new Set();
+  for(let i=0;i<_ri(2,4);i++) {
+    const cr=_ri(0,Math.floor(h/5)), cc=_ri(0,w-18), cl=_ri(10,16);
+    _pw(g,cr,cc+2,"("+"~".repeat(cl)+")");
+    _pw(g,cr+1,cc,"("+"~".repeat(cl+4)+")");
+    _pw(g,cr+2,cc+1,"("+"~".repeat(cl+2)+")");
+    for(let c=cc;c<cc+cl+6;c++) cloudCols.add(c);
+  }
+  for(let c=0;c<w;c++) {
+    const d=cloudCols.has(c)?0.40:0.15;
+    for(let r=Math.floor(h/4);r<h-1;r++) if(Math.random()<d) _ps(g,r,c,_rc(["|","'","`"]));
+  }
+  for(let i=0;i<_ri(1,2);i++) {
+    let lc=_ri(Math.floor(w/5),Math.floor(4*w/5)), r=Math.floor(h/5), c=lc, dir=1;
+    _ps(g,r,c,"*");
+    while(r<h-2) { r++; c=Math.max(0,Math.min(w-1,c+dir)); _ps(g,r,c,dir===1?"\\":"/"); if(Math.random()<0.45) dir*=-1; }
+  }
+  for(let c=0;c<w;c++) _ps(g,h-1,c,Math.random()<0.5?"~":"_");
+  return _pl(g);
+}
+
+// -- Forest ------------------------------------------------------------------
+function genForest(w,h) {
+  const g=_pg(w,h), groundRow=h-2;
+  if(Math.random()<0.5) {
+    for(let r=0;r<h/2;r++) for(let c=0;c<w;c++) if(Math.random()<0.06) _ps(g,r,c,_rc(["*",".","'","°"]));
+    _pw(g,_ri(1,3),_ri(w-12,w-4),"( )");
+  } else {
+    _pw(g,1,3," \\|/ "); _pw(g,2,2,"--(O)--"); _pw(g,3,3," /|\\ ");
+    for(let i=0;i<_ri(1,2);i++) _pw(g,_ri(1,Math.floor(h/4)),_ri(14,w-12),"(~~~)");
+  }
+  let x=_ri(1,4);
+  while(x<w-6) {
+    const tw=_rc([5,7,9]), th=_ri(5,Math.min(10,groundRow-1)), cr=th-2;
+    for(let lv=0;lv<cr;lv++) {
+      const wa=1+lv*2, row=groundRow-(cr-lv)-1, sc=x+Math.floor((tw-wa)/2);
+      _pw(g,row,sc,"/"+("*".repeat(Math.max(0,wa-2)))+"\\");
+    }
+    const tc=x+Math.floor(tw/2);
+    _ps(g,groundRow-1,tc,"|"); _ps(g,groundRow,tc,"|");
+    x+=tw+_ri(1,5);
+  }
+  for(let c=0;c<w;c++) _ps(g,groundRow,c,_rc(['"',"'","_","_","_"]));
+  if(groundRow+1<h) for(let c=0;c<w;c++) _ps(g,groundRow+1,c,"_");
+  return _pl(g);
+}
+
+// -- Ocean -------------------------------------------------------------------
+function genOcean(w,h) {
+  const g=_pg(w,h), skyRows=Math.floor(h/4);
+  for(let r=0;r<skyRows;r++) for(let c=0;c<w;c++) if(Math.random()<0.04) _ps(g,r,c,_rc([".","*","'"]));
+  if(Math.random()<0.6) { _pw(g,1,w-9," \\|/ "); _pw(g,2,w-10,"--(O)--"); _pw(g,3,w-9," /|\\ "); }
+  else _pw(g,1,w-6,"( )");
+  for(let c=0;c<w;c++) _ps(g,skyRows,c,"-");
+  const bc=_ri(5,w-14);
+  _pw(g,skyRows-3,bc+3,"|"); _pw(g,skyRows-2,bc+2,"/|");
+  _pw(g,skyRows-1,bc,"_____|"); _pw(g,skyRows,bc-1,"\\_____|/");
+  for(let r=skyRows+1;r<h-1;r++) {
+    const depth=r-skyRows, offset=(r*3)%7;
+    for(let c=0;c<w;c++) {
+      const base=0.25+depth*0.04;
+      if((c+offset)%(_ri(3,7))<2&&Math.random()<base) _ps(g,r,c,"~");
+    }
+  }
+  for(let i=0;i<_ri(3,7);i++) _pw(g,_ri(skyRows+2,h-2),_ri(1,w-6),_rc(["<><","><>","><)>",">o>"]));
+  for(let c=0;c<w;c++) _ps(g,h-1,c,_rc(["_","_","^","w"]));
+  return _pl(g);
+}
+
+// -- Dispatch ----------------------------------------------------------------
+function generateScene(theme) {
+  const w=80, h=20;
+  const themes={"starry-night":genStarryNight,"garden":genGarden,"storm":genStorm,"forest":genForest,"ocean":genOcean};
+  if(theme==="random") theme=_rc(Object.keys(themes));
+  return (themes[theme]||genStarryNight)(w,h);
+}
+
+// -- Rainbow -----------------------------------------------------------------
+function applyRainbow(lines) {
+  const total = lines.reduce((s,l)=>s+l.length,0);
+  const step = (360*2)/Math.max(total,1);
+  let hue=0, html="";
+  for(const line of lines) {
+    for(const ch of line) {
+      if(ch===" ") { html+=" "; }
+      else {
+        const [r,g,b]=hslToRgb(hue%360,1,0.55);
+        html+=`<span style="color:rgb(${r},${g},${b})">${ch.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</span>`;
+      }
+      hue+=step;
+    }
+    html+="\n";
+  }
+  return html;
+}
+
+function hslToRgb(h,s,l) {
+  const c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2;
+  let r,g,b;
+  if(h<60){r=c;g=x;b=0;}else if(h<120){r=x;g=c;b=0;}else if(h<180){r=0;g=c;b=x;}
+  else if(h<240){r=0;g=x;b=c;}else if(h<300){r=x;g=0;b=c;}else{r=c;g=0;b=x;}
+  return [Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];
+}
+
+// -- Main generate button ----------------------------------------------------
+function generatePattern() {
+  const lines = generateScene(currentTheme);
+  const rainbow = document.getElementById("rainbowCheck").checked;
+  const plain   = document.getElementById("pattern-plain");
+  const richDiv = document.getElementById("pattern-rainbow");
+
+  if(rainbow) {
+    plain.style.display   = "none";
+    richDiv.style.display = "block";
+    richDiv.innerHTML     = applyRainbow(lines);
+  } else {
+    richDiv.style.display = "none";
+    plain.style.display   = "block";
+    plain.textContent     = lines.join("\n");
+  }
+  document.getElementById("pattern-status").textContent = "";
+}
+
+function _getPatternPlainText() {
+  const rainbow = document.getElementById("rainbowCheck").checked;
+  if(rainbow) {
+    return document.getElementById("pattern-rainbow").innerText || document.getElementById("pattern-rainbow").textContent;
+  }
+  return document.getElementById("pattern-plain").textContent;
+}
+
+function copyPatternOutput() {
+  const text = _getPatternPlainText();
+  if(!text||text==="-- press Generate --") { document.getElementById("pattern-status").textContent="Generate first."; return; }
+  _writeToClipboard(text, "pattern");
+  document.getElementById("pattern-status").textContent = "Copied!";
+}
+
+function downloadPattern() {
+  const text = _getPatternPlainText();
+  if(!text||text==="-- press Generate --") { document.getElementById("pattern-status").textContent="Generate first."; return; }
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([text],{type:"text/plain;charset=utf-8"}));
+  a.download="pattern.txt";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  document.getElementById("pattern-status").textContent="Downloaded as pattern.txt";
+}
 </script>
 </body>
 </html>
