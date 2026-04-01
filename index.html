@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TEXT2ASCII - ASCII &amp; Unicode Banner Converter</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #ffffff;
+      color: #000000;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 20px 40px 60px 40px;
+      max-width: 960px;
+    }
+
+    h1 { font-size: 14px; font-weight: normal; margin-bottom: 0; }
+
+    .banner-pre {
+      font-size: 11px;
+      line-height: 1.2;
+      margin: 10px 0 4px 0;
+      white-space: pre;
+    }
+
+    hr { border: none; border-top: 1px solid #000; margin: 16px 0; }
+
+    label { display: inline-block; margin-bottom: 4px; }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      border: 1px solid #000;
+      padding: 3px 6px;
+      background: #fff;
+      color: #000;
+    }
+
+    input[type="text"] { width: 400px; }
+    input[type="number"] { width: 70px; }
+    select { padding: 3px 4px; }
+
+    .row { margin-bottom: 10px; }
+    .row label { min-width: 100px; display: inline-block; vertical-align: middle; }
+
+    .radio-group { display: inline-block; vertical-align: middle; }
+    .radio-group label { min-width: auto; margin-right: 16px; cursor: pointer; }
+    .radio-group input[type="radio"] { margin-right: 4px; cursor: pointer; }
+
+    button {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      border: 1px solid #000;
+      background: #fff;
+      color: #000;
+      padding: 4px 14px;
+      cursor: pointer;
+      margin-right: 8px;
+    }
+    button:hover { background: #000; color: #fff; }
+    button:active { background: #555; color: #fff; }
+
+    #output-section { margin-top: 20px; }
+    #output-section label { display: block; margin-bottom: 6px; font-weight: bold; }
+
+    pre#output {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      line-height: 1.2;
+      border: 1px solid #000;
+      padding: 12px;
+      min-height: 120px;
+      background: #fff;
+      white-space: pre;
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 600px;
+    }
+
+    #status {
+      margin-top: 6px;
+      min-height: 18px;
+      font-size: 12px;
+      color: #444;
+    }
+    #status.error { color: #c00; }
+    #status.ok { color: #060; }
+
+    .section-title { font-weight: bold; margin-bottom: 8px; }
+    .instructions { margin: 12px 0; padding-left: 16px; line-height: 2; }
+    .instructions li { list-style: none; }
+    .instructions li::before { content: "> "; }
+
+    a { color: #000; }
+    a:hover { background: #000; color: #fff; text-decoration: none; }
+
+    /* Font dropdown hidden when in unicode mode */
+    #font-row.hidden { visibility: hidden; }
+  </style>
+</head>
+<body>
+
+<pre class="banner-pre">
+ _____  _______   ______  _______    ___    ____   ____  _____  _____
+|_   _||  ___\ \ / /___ \|  ___\ \  / / \  / ___| / ___||_   _||_   _|
+  | |  | |_   \ V /  __) | |_   \ \/ / _ \| |    | |      | |    | |
+  | |  |  _|   > <  / __/|  _|   \  / ___ \ |___ | |___   | |    | |
+  |_|  |_|    /_/ \_\____|_|      \/_/   \_\____| \____|  |_|    |_|
+</pre>
+
+<p>Convert any text into large ASCII art banners or chunky Unicode block letters.</p>
+<p>Paste the result into your terminal, README, or anywhere that uses a monospace font.</p>
+
+<hr>
+
+<div class="section-title">INPUT</div>
+
+<div class="row">
+  <label for="inputText">Text:</label>
+  <input type="text" id="inputText" maxlength="100" placeholder="Hello World" autocomplete="off" spellcheck="false">
+</div>
+
+<div class="row">
+  <label>Mode:</label>
+  <span class="radio-group">
+    <label><input type="radio" name="mode" value="figlet" id="modeFiglet" checked> ASCII art (figlet)</label>
+    <label><input type="radio" name="mode" value="unicode" id="modeUnicode"> Unicode blocks (█)</label>
+  </span>
+</div>
+
+<div class="row" id="font-row">
+  <label for="fontSelect">Font:</label>
+  <select id="fontSelect">
+    <option value="Standard">Standard</option>
+    <option value="Big">Big</option>
+    <option value="Banner">Banner</option>
+    <option value="Block">Block</option>
+    <option value="Doom">Doom</option>
+    <option value="Slant">Slant</option>
+    <option value="Small">Small</option>
+    <option value="3-D">3-D</option>
+    <option value="Bloody">Bloody</option>
+    <option value="Broadway">Broadway</option>
+    <option value="Bulbhead">Bulbhead</option>
+    <option value="Digital">Digital</option>
+    <option value="Epic">Epic</option>
+    <option value="Graffiti">Graffiti</option>
+    <option value="Larry 3D">Larry 3D</option>
+  </select>
+</div>
+
+<div class="row">
+  <label for="widthInput">Width:</label>
+  <input type="number" id="widthInput" value="80" min="20" max="200">
+  <span style="margin-left:8px;color:#444;font-size:12px">characters</span>
+</div>
+
+<div class="row" style="margin-top:14px;">
+  <button id="btnConvert" onclick="convertText()">[ Convert ]</button>
+  <button onclick="copyOutput()">[ Copy to Clipboard ]</button>
+  <button onclick="downloadOutput()">[ Download .txt ]</button>
+</div>
+
+<div id="output-section">
+  <label for="output">OUTPUT:</label>
+  <pre id="output">-- result will appear here --</pre>
+  <div id="status"></div>
+</div>
+
+<hr>
+
+<div class="section-title">NOTES</div>
+<ul class="instructions">
+  <li>Copy the result and paste it into your terminal, shell script, or README.</li>
+  <li>For terminal use, make sure your font supports Unicode (try Consolas, Fira Code, or Cascadia Code).</li>
+  <li>ASCII art mode requires an internet connection on first use to load fonts from CDN.</li>
+  <li>Unicode block mode works fully offline.</li>
+  <li>Install the CLI tool: <code>pip install git+https://github.com/jbrodev/text2ascii.git</code></li>
+</ul>
+
+<hr>
+<p style="font-size:12px;color:#888;">
+  text2ascii &mdash; MIT License &mdash;
+  <a href="https://github.com/jbrodev/text2ascii">github.com/jbrodev/text2ascii</a>
+</p>
+
+<!-- figlet.js: UMD browser build from jsDelivr CDN -->
+<script src="https://cdn.jsdelivr.net/npm/figlet@1.8.0/lib/figlet.js"></script>
+
+<script>
+// ---------------------------------------------------------------------------
+// Unicode block renderer (mirrors text2ascii/unicode_renderer.py)
+// 5x7 pixel bitmaps, MSB = leftmost pixel
+// ---------------------------------------------------------------------------
+const CHAR_HEIGHT = 7;
+const CHAR_WIDTH  = 5;
+const CHAR_GAP    = 1;
+
+const PIXEL_MAP = {
+  "A": [0b01110,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001],
+  "B": [0b11110,0b10001,0b10001,0b11110,0b10001,0b10001,0b11110],
+  "C": [0b01110,0b10001,0b10000,0b10000,0b10000,0b10001,0b01110],
+  "D": [0b11110,0b10001,0b10001,0b10001,0b10001,0b10001,0b11110],
+  "E": [0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b11111],
+  "F": [0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b10000],
+  "G": [0b01110,0b10001,0b10000,0b10111,0b10001,0b10001,0b01110],
+  "H": [0b10001,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001],
+  "I": [0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b11111],
+  "J": [0b11111,0b00010,0b00010,0b00010,0b00010,0b10010,0b01100],
+  "K": [0b10001,0b10010,0b10100,0b11000,0b10100,0b10010,0b10001],
+  "L": [0b10000,0b10000,0b10000,0b10000,0b10000,0b10000,0b11111],
+  "M": [0b10001,0b11011,0b10101,0b10001,0b10001,0b10001,0b10001],
+  "N": [0b10001,0b11001,0b10101,0b10011,0b10001,0b10001,0b10001],
+  "O": [0b01110,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110],
+  "P": [0b11110,0b10001,0b10001,0b11110,0b10000,0b10000,0b10000],
+  "Q": [0b01110,0b10001,0b10001,0b10001,0b10101,0b10010,0b01101],
+  "R": [0b11110,0b10001,0b10001,0b11110,0b10100,0b10010,0b10001],
+  "S": [0b01110,0b10001,0b10000,0b01110,0b00001,0b10001,0b01110],
+  "T": [0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b00100],
+  "U": [0b10001,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110],
+  "V": [0b10001,0b10001,0b10001,0b10001,0b10001,0b01010,0b00100],
+  "W": [0b10001,0b10001,0b10001,0b10001,0b10101,0b11011,0b10001],
+  "X": [0b10001,0b10001,0b01010,0b00100,0b01010,0b10001,0b10001],
+  "Y": [0b10001,0b10001,0b01010,0b00100,0b00100,0b00100,0b00100],
+  "Z": [0b11111,0b00001,0b00010,0b00100,0b01000,0b10000,0b11111],
+  "0": [0b01110,0b10001,0b10011,0b10101,0b11001,0b10001,0b01110],
+  "1": [0b00100,0b01100,0b00100,0b00100,0b00100,0b00100,0b11111],
+  "2": [0b01110,0b10001,0b00001,0b00010,0b00100,0b01000,0b11111],
+  "3": [0b11111,0b00010,0b00100,0b00110,0b00001,0b10001,0b01110],
+  "4": [0b00010,0b00110,0b01010,0b10010,0b11111,0b00010,0b00010],
+  "5": [0b11111,0b10000,0b11110,0b00001,0b00001,0b10001,0b01110],
+  "6": [0b01110,0b10000,0b10000,0b11110,0b10001,0b10001,0b01110],
+  "7": [0b11111,0b00001,0b00010,0b00100,0b01000,0b01000,0b01000],
+  "8": [0b01110,0b10001,0b10001,0b01110,0b10001,0b10001,0b01110],
+  "9": [0b01110,0b10001,0b10001,0b01111,0b00001,0b00001,0b01110],
+  " ": [0b00000,0b00000,0b00000,0b00000,0b00000,0b00000,0b00000],
+  "!": [0b00100,0b00100,0b00100,0b00100,0b00000,0b00000,0b00100],
+  ".": [0b00000,0b00000,0b00000,0b00000,0b00000,0b00000,0b00100],
+  "?": [0b01110,0b10001,0b00001,0b00010,0b00100,0b00000,0b00100],
+  "-": [0b00000,0b00000,0b00000,0b11111,0b00000,0b00000,0b00000],
+  "_": [0b00000,0b00000,0b00000,0b00000,0b00000,0b00000,0b11111],
+  "'": [0b00100,0b00100,0b00000,0b00000,0b00000,0b00000,0b00000],
+  "(": [0b00010,0b00100,0b01000,0b01000,0b01000,0b00100,0b00010],
+  ")": [0b01000,0b00100,0b00010,0b00010,0b00010,0b00100,0b01000],
+  "/": [0b00001,0b00010,0b00010,0b00100,0b01000,0b01000,0b10000],
+  "@": [0b01110,0b10001,0b10111,0b10101,0b10111,0b10000,0b01110],
+  "#": [0b01010,0b01010,0b11111,0b01010,0b11111,0b01010,0b01010],
+  "+": [0b00000,0b00100,0b00100,0b11111,0b00100,0b00100,0b00000],
+  "=": [0b00000,0b00000,0b11111,0b00000,0b11111,0b00000,0b00000],
+  "*": [0b00000,0b10101,0b01110,0b11111,0b01110,0b10101,0b00000],
+  ":": [0b00000,0b00100,0b00000,0b00000,0b00000,0b00100,0b00000],
+  ",": [0b00000,0b00000,0b00000,0b00000,0b00000,0b00100,0b01000],
+  "&": [0b01100,0b10010,0b10100,0b01000,0b10101,0b10010,0b01101],
+  "%": [0b11000,0b11001,0b00010,0b00100,0b01000,0b10011,0b00011],
+  "$": [0b00100,0b01111,0b10100,0b01110,0b00101,0b11110,0b00100],
+  "|": [0b00100,0b00100,0b00100,0b00100,0b00100,0b00100,0b00100],
+};
+
+const BLANK_ROW = [0,0,0,0,0,0,0];
+
+function unicodeRenderLine(chars, on, off) {
+  const rows = Array.from({length: CHAR_HEIGHT}, () => []);
+  const gap = off.repeat(CHAR_GAP);
+
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i].toUpperCase();
+    const bitmap = PIXEL_MAP[ch] || BLANK_ROW;
+    for (let r = 0; r < CHAR_HEIGHT; r++) {
+      let rowStr = "";
+      for (let b = CHAR_WIDTH - 1; b >= 0; b--) {
+        rowStr += ((bitmap[r] >> b) & 1) ? on : off;
+      }
+      rows[r].push(rowStr);
+    }
+    if (i < chars.length - 1) {
+      for (let r = 0; r < CHAR_HEIGHT; r++) {
+        rows[r].push(gap);
+      }
+    }
+  }
+  return rows.map(r => r.join("")).join("\n");
+}
+
+function unicodeRender(text, width) {
+  if (!text) return "";
+  const on = "\u2588"; // █
+  const off = " ";
+  const charRenderWidth = CHAR_WIDTH + CHAR_GAP;
+  const lines = [];
+
+  // Simple word wrap
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  let currentWords = [];
+  let currentWidth = 0;
+
+  for (const word of words) {
+    const wordWidth = word.length * charRenderWidth - CHAR_GAP;
+    const needed = currentWords.length === 0
+      ? wordWidth
+      : currentWidth + charRenderWidth + wordWidth; // space char between words
+
+    if (currentWords.length > 0 && needed > width) {
+      lines.push(unicodeRenderLine(Array.from(currentWords.join(" ")), on, off));
+      lines.push("");
+      currentWords = [word];
+      currentWidth = wordWidth;
+    } else {
+      currentWords.push(word);
+      currentWidth = needed;
+    }
+  }
+
+  if (currentWords.length > 0) {
+    lines.push(unicodeRenderLine(Array.from(currentWords.join(" ")), on, off));
+  }
+
+  return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// figlet.js font loading
+// ---------------------------------------------------------------------------
+const FIGLET_FONTS = [
+  "Standard","Big","Banner","Block","Doom","Slant","Small","3-D",
+  "Bloody","Broadway","Bulbhead","Digital","Epic","Graffiti","Larry 3D"
+];
+const loadedFonts = new Set();
+
+function loadFigletFont(fontName, callback) {
+  if (loadedFonts.has(fontName)) {
+    callback(null);
+    return;
+  }
+  if (typeof figlet === "undefined") {
+    callback(new Error("figlet.js not loaded. Check your internet connection."));
+    return;
+  }
+  figlet.defaults({ fontPath: "https://cdn.jsdelivr.net/npm/figlet@1.8.0/fonts" });
+  figlet.preloadFonts([fontName], function(err) {
+    if (!err) loadedFonts.add(fontName);
+    callback(err);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// UI helpers
+// ---------------------------------------------------------------------------
+function setStatus(msg, type) {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.className = type || "";
+}
+
+function getMode() {
+  return document.querySelector('input[name="mode"]:checked').value;
+}
+
+// Toggle font dropdown visibility based on mode
+document.querySelectorAll('input[name="mode"]').forEach(function(radio) {
+  radio.addEventListener("change", function() {
+    document.getElementById("font-row").classList.toggle("hidden", getMode() === "unicode");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Main convert function
+// ---------------------------------------------------------------------------
+function convertText() {
+  const text = document.getElementById("inputText").value.trim();
+  if (!text) {
+    setStatus("Please enter some text first.", "error");
+    return;
+  }
+
+  const width = parseInt(document.getElementById("widthInput").value, 10) || 80;
+  const mode = getMode();
+
+  setStatus("Converting...");
+  document.getElementById("output").textContent = "...";
+
+  if (mode === "unicode") {
+    try {
+      const result = unicodeRender(text, width);
+      document.getElementById("output").textContent = result || "(empty output)";
+      setStatus("Done.", "ok");
+    } catch(e) {
+      setStatus("Error: " + e.message, "error");
+    }
+    return;
+  }
+
+  // figlet mode
+  const font = document.getElementById("fontSelect").value;
+
+  loadFigletFont(font, function(loadErr) {
+    if (loadErr) {
+      // Fallback: try Standard font
+      setStatus("Could not load font '" + font + "'. Trying Standard... (check internet connection)", "error");
+      font = "Standard";
+    }
+
+    if (typeof figlet === "undefined") {
+      document.getElementById("output").textContent = "(error)";
+      setStatus("figlet.js failed to load. Check your internet connection.", "error");
+      return;
+    }
+
+    figlet.text(text, { font: font, width: width }, function(err, result) {
+      if (err) {
+        document.getElementById("output").textContent = "(error)";
+        setStatus("figlet error: " + err.message, "error");
+        return;
+      }
+      document.getElementById("output").textContent = result || "(empty output)";
+      setStatus("Done.", "ok");
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Copy to clipboard
+// ---------------------------------------------------------------------------
+function copyOutput() {
+  const text = document.getElementById("output").textContent;
+  if (!text || text === "-- result will appear here --") {
+    setStatus("Nothing to copy yet.", "error");
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      setStatus("Copied to clipboard!", "ok");
+    }).catch(function() {
+      _fallbackCopy(text);
+    });
+  } else {
+    _fallbackCopy(text);
+  }
+}
+
+function _fallbackCopy(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand("copy");
+    setStatus("Copied to clipboard!", "ok");
+  } catch(e) {
+    setStatus("Copy failed. Please select and copy manually.", "error");
+  }
+  document.body.removeChild(ta);
+}
+
+// ---------------------------------------------------------------------------
+// Download as .txt
+// ---------------------------------------------------------------------------
+function downloadOutput() {
+  const text = document.getElementById("output").textContent;
+  if (!text || text === "-- result will appear here --") {
+    setStatus("Nothing to download yet.", "error");
+    return;
+  }
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ascii_art.txt";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setStatus("Downloaded as ascii_art.txt", "ok");
+}
+
+// Enter key triggers convert
+document.getElementById("inputText").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") convertText();
+});
+</script>
+</body>
+</html>
