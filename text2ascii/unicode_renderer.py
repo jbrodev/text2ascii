@@ -190,3 +190,110 @@ def render(
             lines.pop()
 
     return "\n".join(lines)
+
+
+def _build_pixel_grid(text: str) -> list[list[bool]]:
+    """
+    Build a 2D boolean grid for a single line of text.
+    Returns a list of rows, each row a list of bools (True = filled pixel).
+    """
+    chars = list(text)
+    total_cols = len(chars) * (CHAR_WIDTH + CHAR_GAP) - CHAR_GAP
+    grid = [[False] * total_cols for _ in range(CHAR_HEIGHT)]
+
+    col_offset = 0
+    for ch in chars:
+        bitmap = PIXEL_MAP.get(ch.upper(), _BLANK)
+        for row_idx in range(CHAR_HEIGHT):
+            for bit_pos in range(CHAR_WIDTH - 1, -1, -1):
+                col = col_offset + (CHAR_WIDTH - 1 - bit_pos)
+                grid[row_idx][col] = bool((bitmap[row_idx] >> bit_pos) & 1)
+        col_offset += CHAR_WIDTH + CHAR_GAP
+
+    return grid
+
+
+def render_3d(
+    text: str,
+    width: int | None = None,
+    depth: int = 1,
+) -> str:
+    """
+    Render text as Unicode block art with a 3D drop-shadow effect.
+
+    The front face uses '█', the shadow uses '░', and pixels where
+    both overlap use '▓', creating a diagonal depth illusion.
+
+    Args:
+        text:  Input text.
+        width: Max output width for word-wrapping.
+        depth: Shadow offset in pixels (default 2).
+
+    Returns:
+        A multi-line string ready to print.
+    """
+    if not text:
+        return ""
+
+    char_render_width = CHAR_WIDTH + CHAR_GAP
+
+    # Collect lines of text (word-wrapped if width given)
+    text_lines: list[str] = []
+    if width is not None:
+        words = text.split()
+        current_words: list[str] = []
+        current_w = 0
+        for word in words:
+            word_w = len(word) * char_render_width - CHAR_GAP
+            needed = word_w if not current_words else current_w + char_render_width + word_w
+            if current_words and needed > width:
+                text_lines.append(" ".join(current_words))
+                current_words = [word]
+                current_w = word_w
+            else:
+                current_words.append(word)
+                current_w = needed
+        if current_words:
+            text_lines.append(" ".join(current_words))
+    else:
+        text_lines = [l for l in text.splitlines() if l] or [text]
+
+    output_lines: list[str] = []
+
+    for line_text in text_lines:
+        grid = _build_pixel_grid(line_text)
+        rows = len(grid)
+        cols = len(grid[0]) if grid else 0
+
+        # Canvas is expanded by depth in both directions for the shadow
+        canvas_rows = rows + depth
+        canvas_cols = cols + depth
+
+        # Build combined canvas: 0=bg, 1=shadow only, 2=main only, 3=both
+        canvas = [[0] * canvas_cols for _ in range(canvas_rows)]
+
+        # Place shadow (offset +depth rows, +depth cols)
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c]:
+                    canvas[r + depth][c + depth] |= 1
+
+        # Place main layer
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c]:
+                    canvas[r][c] |= 2
+
+        # Map to characters
+        _map = {0: " ", 1: "░", 2: "█", 3: "▓"}
+        rendered_rows = ["".join(_map[canvas[r][c]] for c in range(canvas_cols)) for r in range(canvas_rows)]
+
+        # Strip trailing spaces from each row
+        output_lines.extend(row.rstrip() for row in rendered_rows)
+        output_lines.append("")
+
+    # Remove trailing blank line
+    while output_lines and output_lines[-1] == "":
+        output_lines.pop()
+
+    return "\n".join(output_lines)

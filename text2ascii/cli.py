@@ -19,7 +19,7 @@ import sys
 import colorama
 import pyfiglet
 
-from text2ascii.unicode_renderer import render as _unicode_render
+from text2ascii.unicode_renderer import render as _unicode_render, render_3d as _unicode_render_3d
 
 # ---------------------------------------------------------------------------
 # Color name → colorama constant mapping
@@ -108,18 +108,26 @@ def colorize(text: str, color_name: str) -> str:
     return fore + text + colorama.Style.RESET_ALL
 
 
-def print_persistent_instructions(output: str, args: argparse.Namespace) -> None:
+def _get_profile_path() -> tuple[str, bool]:
     """
-    Print the banner and instructions for making it permanent in the user's
-    shell startup file. Never writes any files automatically.
+    Return (profile_path, is_powershell) for the current platform/shell.
     """
-    print(output)
-    print()
-    print("─" * 60)
-    print("  HOW TO MAKE THIS BANNER PERMANENT")
-    print("─" * 60)
+    if sys.platform == "win32":
+        shell = os.environ.get("SHELL", "")
+        if shell:
+            return os.path.expanduser("~/.bashrc"), False
+        profile = os.path.expandvars(
+            r"%USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
+        )
+        return profile, True
+    elif sys.platform == "darwin":
+        return os.path.expanduser("~/.zshrc"), False
+    else:
+        return os.path.expanduser("~/.bashrc"), False
 
-    # Reconstruct the command that was run (minus --persistent)
+
+def _build_banner_command(args: argparse.Namespace) -> str:
+    """Reconstruct the text2ascii command from args (minus --persistent)."""
     parts = ["text2ascii"]
     if args.text:
         parts.append(f'"{args.text}"')
@@ -127,55 +135,55 @@ def print_persistent_instructions(output: str, args: argparse.Namespace) -> None
         parts.extend(["-f", args.font])
     if args.unicode:
         parts.append("-u")
+    if getattr(args, "three_d", False):
+        parts.append("--3d")
     if args.color:
         parts.extend(["-c", args.color])
     if args.width:
         parts.extend(["-w", str(args.width)])
-    cmd = " ".join(parts)
+    return " ".join(parts)
 
-    line_to_add = cmd
 
-    if sys.platform == "win32":
-        shell = os.environ.get("SHELL", "")
-        if shell:
-            # Git Bash / MSYS on Windows
-            profile = os.path.expanduser("~/.bashrc")
-            print(f"\n  Shell startup file: {profile}")
-            print(f"\n  Add this line to run your banner on every terminal open:")
-            print(f'\n      echo \'{line_to_add}\' >> "{profile}"')
-            print(f"  Or open {profile} in a text editor and add:")
-            print(f"\n      {line_to_add}")
-        else:
-            # PowerShell
-            profile = os.path.expandvars(
-                r"%USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
-            )
-            print(f"\n  PowerShell profile: {profile}")
-            print(f"\n  Run these commands in PowerShell:")
-            print(f"\n      # Create profile if it doesn't exist:")
-            print(f"      New-Item -Force -ItemType File -Path $PROFILE | Out-Null")
-            print(f"\n      # Add your banner command:")
-            print(f'      Add-Content -Path $PROFILE -Value \'{line_to_add}\'')
-    elif sys.platform == "darwin":
-        profile = os.path.expanduser("~/.zshrc")
-        print(f"\n  Shell startup file: {profile}")
-        print(f"\n  Run this to add your banner permanently:")
-        print(f'\n      echo \'{line_to_add}\' >> {profile}')
-        print(f"\n  Or open {profile} in a text editor and add:")
-        print(f"\n      {line_to_add}")
-    else:
-        profile = os.path.expanduser("~/.bashrc")
-        print(f"\n  Shell startup file: {profile}")
-        print(f"\n  Run this to add your banner permanently:")
-        print(f'\n      echo \'{line_to_add}\' >> {profile}')
-        print(f"\n  Or open {profile} in a text editor and add:")
-        print(f"\n      {line_to_add}")
-
+def save_persistent_banner(output: str, args: argparse.Namespace) -> None:
+    """
+    Print the banner then write the banner command to the shell startup file
+    so it runs automatically on every new terminal session.
+    Checks for duplicates before writing.
+    """
+    print(output)
     print()
-    print("  After editing, reload your shell with:  source " + (
-        profile if sys.platform != "win32" else "$PROFILE"
-    ))
-    print("─" * 60)
+
+    profile, is_powershell = _get_profile_path()
+    cmd = _build_banner_command(args)
+
+    # Check for duplicate
+    if os.path.exists(profile):
+        try:
+            existing = open(profile, encoding="utf-8", errors="replace").read()
+            if cmd in existing:
+                print(f"Banner command already in {profile} — nothing to do.")
+                return
+        except OSError:
+            pass
+
+    # For PowerShell, ensure the profile directory exists
+    if is_powershell:
+        os.makedirs(os.path.dirname(profile), exist_ok=True)
+
+    try:
+        with open(profile, "a", encoding="utf-8") as f:
+            f.write(f"\n# text2ascii banner\n{cmd}\n")
+        print("─" * 60)
+        print(f"  Banner saved to: {profile}")
+        print(f"  Command added:   {cmd}")
+        print()
+        if is_powershell:
+            print("  Reload with:  . $PROFILE")
+        else:
+            print(f"  Reload with:  source {profile}")
+        print("─" * 60)
+    except OSError as e:
+        _fatal(f"Could not write to '{profile}': {e}")
 
 
 def _fatal(message: str) -> None:
@@ -220,6 +228,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "-u", "--unicode",
         action="store_true",
         help="Use Unicode block characters (█) instead of figlet ASCII art.",
+    )
+    parser.add_argument(
+        "--3d",
+        dest="three_d",
+        action="store_true",
+        help="Add a 3D drop-shadow effect to Unicode block output (implies --unicode).",
     )
     parser.add_argument(
         "-s", "--save",
@@ -281,7 +295,9 @@ def main() -> None:
     width = args.width or shutil.get_terminal_size(fallback=(80, 24)).columns
 
     # Render
-    if args.unicode:
+    if args.three_d or (args.unicode and args.three_d):
+        output = _unicode_render_3d(text, width=width)
+    elif args.unicode:
         output = _unicode_render(text, width=width)
     else:
         output = render_figlet(text, font=args.font, width=width)
@@ -308,9 +324,9 @@ def main() -> None:
         except OSError as e:
             _fatal(f"Could not write to '{args.save}': {e}")
 
-    # Persistent instructions or plain print
+    # Persistent: write command to shell startup file
     if args.persistent:
-        print_persistent_instructions(output, args)
+        save_persistent_banner(output, args)
     else:
         print(output)
 
