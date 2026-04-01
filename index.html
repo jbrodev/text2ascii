@@ -238,6 +238,12 @@
     <pre class="cmd" id="cmd-permanent"></pre>
     <button onclick="copyCmd('cmd-permanent')">[ Copy ]</button>
   </div>
+
+  <div class="cmd-block">
+    <div class="cmd-label" style="color:#c00;">&#x26A0; Accidentally added it twice? Run this to remove duplicates:</div>
+    <pre class="cmd" id="cmd-dedup"></pre>
+    <button onclick="copyCmd('cmd-dedup')">[ Copy ]</button>
+  </div>
 </div>
 
 <hr>
@@ -449,19 +455,26 @@ function updateCommands() {
 
   let sessionCmd, permanentCmd;
 
+  let dedupCmd;
+  const escaped = cmd.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
   if (currentShell === "bash") {
     sessionCmd   = cmd;
     permanentCmd = "echo '" + cmd + "' >> ~/.bashrc\nsource ~/.bashrc";
+    dedupCmd     = "# Remove duplicate lines from ~/.bashrc (keeps one copy):\nawk '!seen[$0]++' ~/.bashrc > /tmp/bashrc_clean && mv /tmp/bashrc_clean ~/.bashrc\nsource ~/.bashrc";
   } else if (currentShell === "powershell") {
     sessionCmd   = cmd;
-    permanentCmd = "# Run this once to add your banner to your PowerShell profile:\nif (!(Test-Path $PROFILE)) { New-Item -Force -ItemType File $PROFILE | Out-Null }\nAdd-Content -Path $PROFILE -Value '" + cmd + "'";
+    permanentCmd = "if (!(Test-Path $PROFILE)) { New-Item -Force -ItemType File $PROFILE | Out-Null }\nAdd-Content -Path $PROFILE -Value '" + cmd + "'";
+    dedupCmd     = "# Remove duplicate lines from your PowerShell profile (keeps one copy):\n$lines = Get-Content $PROFILE | Select-Object -Unique\nSet-Content $PROFILE -Value $lines";
   } else if (currentShell === "fish") {
     sessionCmd   = cmd;
     permanentCmd = "echo '" + cmd + "' >> ~/.config/fish/config.fish";
+    dedupCmd     = "# Remove duplicate lines from fish config (keeps one copy):\nawk '!seen[$0]++' ~/.config/fish/config.fish > /tmp/fish_clean && mv /tmp/fish_clean ~/.config/fish/config.fish";
   }
 
   document.getElementById("cmd-session").textContent   = sessionCmd;
   document.getElementById("cmd-permanent").textContent = permanentCmd;
+  document.getElementById("cmd-dedup").textContent     = dedupCmd;
   document.getElementById("commands-section").classList.add("visible");
 }
 
