@@ -121,15 +121,17 @@ source ~/.zshrc    # macOS
 
 ## Website
 
-Open `index.html` in any browser — no server needed.
+**[jbrodev.github.io/text2ascii](https://jbrodev.github.io/text2ascii/)**
 
-For GitHub Pages hosting, enable Pages in the repo settings pointing to the root branch.
+No install required. Open the site, type your text, pick a style and color, then hit Convert.
 
-Features:
-- 15 figlet fonts (loaded from CDN on first use)
-- Unicode block mode (fully offline)
-- Copy to clipboard
-- Download as `.txt`
+- Choose from **ASCII art** (15 fonts), **Unicode blocks**, or **Unicode 3D**
+- Pick a color — previewed in the terminal, not the browser
+- **Copy to clipboard** or **download as `.txt`**
+- The **Terminal Commands** panel generates ready-to-paste commands for your shell:
+  - Run once in your current session
+  - Save permanently so it appears every time you open a terminal
+  - Fix it if you accidentally added it twice
 
 ---
 
