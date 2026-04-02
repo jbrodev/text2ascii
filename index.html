@@ -288,6 +288,39 @@
   <div id="pattern-status" style="margin-top:4px;min-height:16px;font-size:12px;color:#444;"></div>
 </div>
 
+<!-- Pattern terminal commands — shown after generation -->
+<div id="pattern-commands-section" style="display:none;margin-top:20px;">
+  <hr>
+  <div class="section-title">TERMINAL COMMANDS</div>
+  <p style="font-size:12px;color:#555;margin-bottom:10px;">
+    Copy the command for your shell to run this pattern in your terminal.
+  </p>
+
+  <div class="shell-tabs">
+    <button class="shell-tab active" onclick="setShell('bash')" id="ptab-bash">Bash / Zsh</button>
+    <button class="shell-tab" onclick="setShell('powershell')" id="ptab-powershell">PowerShell</button>
+    <button class="shell-tab" onclick="setShell('fish')" id="ptab-fish">Fish</button>
+  </div>
+
+  <div class="cmd-block">
+    <div class="cmd-label">&#x25B6; Run once (this session):</div>
+    <pre class="cmd" id="pcmd-session"></pre>
+    <button onclick="copyCmd('pcmd-session')">[ Copy ]</button>
+  </div>
+
+  <div class="cmd-block">
+    <div class="cmd-label">&#x25B6; Save permanently (runs every time you open a terminal):</div>
+    <pre class="cmd" id="pcmd-permanent"></pre>
+    <button onclick="copyCmd('pcmd-permanent')">[ Copy ]</button>
+  </div>
+
+  <div class="cmd-block">
+    <div class="cmd-label" style="color:#c00;">&#x26A0; Accidentally added it twice? Run this to remove duplicates:</div>
+    <pre class="cmd" id="pcmd-dedup"></pre>
+    <button onclick="copyCmd('pcmd-dedup')">[ Copy ]</button>
+  </div>
+</div>
+
 <hr>
 
 <div class="section-title">NOTES</div>
@@ -444,9 +477,16 @@ function loadFigletFont(fontName, callback) {
 let currentShell = "bash";
 function setShell(shell) {
   currentShell = shell;
-  document.querySelectorAll(".shell-tab").forEach(t => t.classList.remove("active"));
-  document.getElementById("tab-" + shell).classList.add("active");
+  // Sync both sets of shell tabs
+  ["tab-", "ptab-"].forEach(prefix => {
+    const el = document.getElementById(prefix + shell);
+    if (el) {
+      el.closest(".shell-tabs").querySelectorAll(".shell-tab").forEach(t => t.classList.remove("active"));
+      el.classList.add("active");
+    }
+  });
   updateCommands();
+  updatePatternCommands();
 }
 
 // ---------------------------------------------------------------------------
@@ -519,6 +559,43 @@ function updateCommands() {
   document.getElementById("cmd-permanent").textContent = permanentCmd;
   document.getElementById("cmd-dedup").textContent     = dedupCmd;
   document.getElementById("commands-section").classList.add("visible");
+}
+
+// ---------------------------------------------------------------------------
+// Pattern terminal commands
+// ---------------------------------------------------------------------------
+function buildPatternCommand() {
+  const theme   = currentTheme;
+  const rainbow = document.getElementById("rainbowCheck").checked;
+  let cmd = "text2ascii --pattern " + theme;
+  if (rainbow) cmd += " --rainbow";
+  return cmd;
+}
+
+function updatePatternCommands() {
+  const section = document.getElementById("pattern-commands-section");
+  if (section.style.display === "none") return; // not shown yet — skip
+
+  const cmd = buildPatternCommand();
+  let sessionCmd, permanentCmd, dedupCmd;
+
+  if (currentShell === "bash") {
+    sessionCmd   = cmd;
+    permanentCmd = "echo '" + cmd + "' >> ~/.bashrc\nsource ~/.bashrc";
+    dedupCmd     = "# Remove duplicate lines from ~/.bashrc (keeps one copy):\nawk '!seen[$0]++' ~/.bashrc > /tmp/bashrc_clean && mv /tmp/bashrc_clean ~/.bashrc\nsource ~/.bashrc";
+  } else if (currentShell === "powershell") {
+    sessionCmd   = cmd;
+    permanentCmd = "if (!(Test-Path $PROFILE)) { New-Item -Force -ItemType File $PROFILE | Out-Null }\nAdd-Content -Path $PROFILE -Value '" + cmd + "'";
+    dedupCmd     = "# Remove duplicate lines from your PowerShell profile (keeps one copy):\n$lines = Get-Content $PROFILE | Select-Object -Unique\nSet-Content $PROFILE -Value $lines";
+  } else if (currentShell === "fish") {
+    sessionCmd   = cmd;
+    permanentCmd = "echo '" + cmd + "' >> ~/.config/fish/config.fish";
+    dedupCmd     = "# Remove duplicate lines from fish config (keeps one copy):\nawk '!seen[$0]++' ~/.config/fish/config.fish > /tmp/fish_clean && mv /tmp/fish_clean ~/.config/fish/config.fish";
+  }
+
+  document.getElementById("pcmd-session").textContent   = sessionCmd;
+  document.getElementById("pcmd-permanent").textContent = permanentCmd;
+  document.getElementById("pcmd-dedup").textContent     = dedupCmd;
 }
 
 // ---------------------------------------------------------------------------
@@ -835,6 +912,11 @@ function generatePattern() {
     plain.textContent     = lines.join("\n");
   }
   document.getElementById("pattern-status").textContent = "";
+
+  // Show and populate terminal commands
+  const section = document.getElementById("pattern-commands-section");
+  section.style.display = "block";
+  updatePatternCommands();
 }
 
 function _getPatternPlainText() {
