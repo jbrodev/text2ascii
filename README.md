@@ -10,6 +10,8 @@
 
 Convert any text into large ASCII art banners (figlet-style) and chunky Unicode block letters. Works as a CLI tool and as a retro single-page website.
 
+![text2ascii preview](preview.png)
+
 ---
 
 ## Installation
@@ -58,6 +60,19 @@ text2ascii "Your Text Here"
 `bright_red`, `bright_green`, `bright_yellow`, `bright_blue`, `bright_magenta`, `bright_cyan`, `bright_white`, `rainbow`
 
 > `--color rainbow` and `--rainbow` are interchangeable.
+
+**Available pattern themes:**
+
+| Theme | Description |
+|-------|-------------|
+| `starry-night` | Night sky with stars, a moon, shooting stars, and a silhouette horizon |
+| `garden` | Sun, clouds, flowers with stems and leaves, butterflies |
+| `storm` | Storm clouds, rain, lightning bolts, puddles |
+| `forest` | Trees of varying heights, ground cover, day or night sky |
+| `ocean` | Waves, fish, a sailboat, horizon line, sea floor |
+| `random` | Picks one of the above at random each time |
+
+> Every press generates a unique variation — no two scenes are the same.
 
 ### Examples
 
