@@ -7,13 +7,16 @@ Usage:
     text2ascii "Hi" --unicode
     text2ascii "Hello" --save output.txt
     text2ascii "Hello" --persistent
+    text2ascii --show
     text2ascii --list-fonts
 """
 
 import argparse
+import json
 import os
 import pydoc
 import shutil
+import subprocess
 import sys
 
 import colorama
@@ -117,13 +120,41 @@ def _get_profile_path() -> tuple[str, bool]:
         shell = os.environ.get("SHELL", "")
         if shell:
             return os.path.expanduser("~/.bashrc"), False
+        # Query PowerShell for its actual $PROFILE path so OneDrive-redirected
+        # Documents folders and different PS versions (5 vs 7) are handled correctly.
+        for ps_exe in ("pwsh", "powershell"):
+            try:
+                result = subprocess.run(
+                    [ps_exe, "-NoProfile", "-Command", "$PROFILE"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if result.returncode == 0:
+                    path = result.stdout.strip()
+                    if path:
+                        return path, True
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                continue
+        # Fallback: use the classic PS5 path (may be wrong on OneDrive setups)
         profile = os.path.expandvars(
             r"%USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
         )
         return profile, True
     elif sys.platform == "darwin":
-        return os.path.expanduser("~/.zshrc"), False
+        shell = os.environ.get("SHELL", "")
+        if "fish" in shell:
+            return os.path.expanduser("~/.config/fish/config.fish"), False
+        if "zsh" in shell or not shell:
+            return os.path.expanduser("~/.zshrc"), False
+        # bash on macOS: terminal apps open a login shell, which sources .bash_profile
+        return os.path.expanduser("~/.bash_profile"), False
     else:
+        shell = os.environ.get("SHELL", "")
+        if "zsh" in shell:
+            return os.path.expanduser("~/.zshrc"), False
+        if "fish" in shell:
+            return os.path.expanduser("~/.config/fish/config.fish"), False
         return os.path.expanduser("~/.bashrc"), False
 
 
@@ -182,6 +213,9 @@ def save_persistent_banner(output: str, args: argparse.Namespace) -> None:
         print()
         if is_powershell:
             print("  Reload with:  . $PROFILE")
+            print()
+            print("  If the banner doesn't appear, allow scripts to run once with:")
+            print("    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser")
         else:
             print(f"  Reload with:  source {profile}")
         print("─" * 60)
@@ -199,6 +233,70 @@ def _save_plain(output: str, path: str) -> None:
         print(f"Saved to {path}", file=sys.stderr)
     except OSError as e:
         _fatal(f"Could not write to '{path}': {e}")
+
+
+def _get_default_config_path() -> str:
+    """Return the path to the saved default banner config file."""
+    if sys.platform == "win32":
+        base = os.path.expandvars(r"%APPDATA%\text2ascii")
+    else:
+        base = os.path.expanduser("~/.config/text2ascii")
+    return os.path.join(base, "default.json")
+
+
+def save_default_config(args: argparse.Namespace) -> None:
+    """Persist the banner args to the default config so --show can replay them."""
+    config = {
+        "text": args.text,
+        "font": args.font,
+        "unicode": args.unicode,
+        "three_d": getattr(args, "three_d", False),
+        "color": args.color,
+        "rainbow": args.rainbow,
+        "width": args.width,
+    }
+    path = _get_default_config_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(config, f)
+    except OSError as e:
+        _fatal(f"Could not save default config to '{path}': {e}")
+
+
+def show_default_banner() -> None:
+    """Load and display the saved default banner (set via --persistent)."""
+    path = _get_default_config_path()
+    if not os.path.exists(path):
+        _fatal(
+            "No default banner saved yet. "
+            "Run: text2ascii \"your text\" --persistent"
+        )
+    try:
+        with open(path, encoding="utf-8") as f:
+            config = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        _fatal(f"Could not read default config: {e}")
+
+    text = config.get("text") or ""
+    if not text.strip():
+        _fatal("Saved default banner has no text.")
+
+    width = config.get("width") or shutil.get_terminal_size(fallback=(80, 24)).columns
+
+    if config.get("three_d"):
+        output = _unicode_render_3d(text, width=width)
+    elif config.get("unicode"):
+        output = _unicode_render(text, width=width)
+    else:
+        output = render_figlet(text, font=config.get("font") or "standard", width=width)
+
+    if config.get("rainbow") or config.get("color") == "rainbow":
+        output = _patterns.rainbow_colorize(output.splitlines())
+    elif config.get("color"):
+        output = colorize(output, config["color"])
+
+    print(output)
 
 
 def _fatal(message: str) -> None:
@@ -261,6 +359,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Print instructions for adding this banner to your shell startup file.",
     )
     parser.add_argument(
+        "--show",
+        action="store_true",
+        help="Display your saved default banner instantly (set with --persistent).",
+    )
+    parser.add_argument(
         "-w", "--width",
         type=int,
         default=None,
@@ -312,6 +415,11 @@ def main() -> None:
 
     parser = _build_parser()
     args = parser.parse_args()
+
+    # --show: replay the saved default banner
+    if args.show:
+        show_default_banner()
+        return
 
     # --list-fonts
     if args.list_fonts:
@@ -386,9 +494,10 @@ def main() -> None:
     if args.save:
         _save_plain(output, args.save)
 
-    # Persistent: write command to shell startup file
+    # Persistent: write command to shell startup file and save default config
     if args.persistent:
         save_persistent_banner(output, args)
+        save_default_config(args)
     else:
         print(output)
 
