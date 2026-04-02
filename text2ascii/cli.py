@@ -42,7 +42,7 @@ _COLOR_MAP = {
     "bright_white": colorama.Fore.LIGHTWHITE_EX,
 }
 
-_VALID_COLORS = sorted(_COLOR_MAP.keys())
+_VALID_COLORS = sorted(_COLOR_MAP.keys()) + ["rainbow"]
 
 
 def setup_windows_utf8() -> None:
@@ -138,7 +138,9 @@ def _build_banner_command(args: argparse.Namespace) -> str:
         parts.append("-u")
     if getattr(args, "three_d", False):
         parts.append("--3d")
-    if args.color:
+    if args.color == "rainbow" or args.rainbow:
+        parts.append("--rainbow")
+    elif args.color:
         parts.extend(["-c", args.color])
     if args.width:
         parts.extend(["-w", str(args.width)])
@@ -374,8 +376,8 @@ def main() -> None:
     if not output.strip():
         _fatal("Rendering produced empty output. Try a different font or input.")
 
-    # Apply rainbow or solid color
-    if args.rainbow:
+    # Apply rainbow or solid color ("rainbow" accepted as --color value too)
+    if args.rainbow or args.color == "rainbow":
         output = _patterns.rainbow_colorize(output.splitlines())
     elif args.color:
         output = colorize(output, args.color)

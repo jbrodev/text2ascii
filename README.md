@@ -49,9 +49,15 @@ text2ascii "Your Text Here"
 | `--persistent` | `-p` | Print instructions to add banner to shell startup |
 | `--width N` | `-w` | Max width in characters (default: terminal width) |
 | `--color NAME` | `-c` | Colorize output (see colors below) |
+| `--rainbow` | `-r` | Full-spectrum rainbow gradient |
+| `--pattern THEME` | `-P` | Generate a random ASCII art scene |
+| `--list-patterns` | | List available scene themes |
+| `--height N` | `-H` | Scene height for `--pattern` (default: terminal height) |
 
 **Available colors:** `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`,
-`bright_red`, `bright_green`, `bright_yellow`, `bright_blue`, `bright_magenta`, `bright_cyan`, `bright_white`
+`bright_red`, `bright_green`, `bright_yellow`, `bright_blue`, `bright_magenta`, `bright_cyan`, `bright_white`, `rainbow`
+
+> `--color rainbow` and `--rainbow` are interchangeable.
 
 ### Examples
 
@@ -67,6 +73,15 @@ text2ascii "Hi" --unicode
 
 # Colored output
 text2ascii "Hello" --font doom --color cyan
+
+# Rainbow gradient
+text2ascii "Hello" --color rainbow
+text2ascii "Hello" --rainbow
+
+# Pattern scenes
+text2ascii --pattern starry-night
+text2ascii --pattern random --rainbow
+text2ascii --list-patterns
 
 # Save to file
 text2ascii "Hello" --save banner.txt
