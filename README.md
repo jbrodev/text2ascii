@@ -48,7 +48,8 @@ text2ascii "Your Text Here"
 | `--list-fonts` | | List all available fonts |
 | `--unicode` | `-u` | Use Unicode block characters (█) |
 | `--save FILE` | `-s` | Save output to a text file |
-| `--persistent` | `-p` | Print instructions to add banner to shell startup |
+| `--persistent` | `-p` | Write banner command to your shell startup file and save as default |
+| `--show` | | Display your saved default banner instantly |
 | `--width N` | `-w` | Max width in characters (default: terminal width) |
 | `--color NAME` | `-c` | Colorize output (see colors below) |
 | `--rainbow` | `-r` | Full-spectrum rainbow gradient |
@@ -107,8 +108,11 @@ text2ascii --list-fonts
 # Read from stdin
 echo "Hello" | text2ascii -
 
-# Persistent banner instructions
+# Save as default banner (writes to shell startup file)
 text2ascii "Hello World" --persistent
+
+# Display your saved default banner on demand
+text2ascii --show
 ```
 
 ### Example Output
@@ -125,27 +129,58 @@ text2ascii "Hello World" --persistent
 
 ## Making a Banner Permanent
 
-Run with `--persistent` to get platform-specific instructions:
+Run with `--persistent` to automatically write the banner command to your shell startup file:
 
 ```bash
 text2ascii "Hello World" --font doom --persistent
 ```
 
-This will print the exact command to add to your shell startup file (`~/.bashrc`, `~/.zshrc`, or PowerShell profile). The tool never modifies any files automatically.
+This writes the command to the correct profile for your shell and platform, then prints a confirmation with the path and reload instructions. It also saves the banner as your default so `--show` works instantly later.
 
-**Manual method** — add to your shell startup file:
+**Shell and platform support:**
+
+| Platform | Shell | Profile written |
+|----------|-------|-----------------|
+| Windows | PowerShell (5 or 7) | `$PROFILE` (queried live — works with OneDrive-redirected Documents) |
+| Windows | Git Bash / MSYS2 | `~/.bashrc` |
+| macOS | zsh (default) | `~/.zshrc` |
+| macOS | bash | `~/.bash_profile` |
+| macOS / Linux | fish | `~/.config/fish/config.fish` |
+| Linux | bash | `~/.bashrc` |
+| Linux | zsh | `~/.zshrc` |
+
+> Works in all integrated IDE terminals (VS Code, Cursor, JetBrains, etc.) — the shell detection reads your `SHELL` environment variable, which IDEs inherit automatically.
+
+Reload your shell after running:
 
 ```bash
-# In ~/.bashrc or ~/.zshrc
-text2ascii "Hello World" --font doom
+source ~/.bashrc        # bash (Linux)
+source ~/.zshrc         # zsh (macOS/Linux)
+. $PROFILE              # PowerShell
 ```
 
-Reload your shell:
+**PowerShell note:** If the banner doesn't appear after reloading, allow local scripts to run:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+---
+
+## Displaying Your Banner On Demand
+
+Once you've run `--persistent`, you can redisplay your banner at any time — useful for labeling your terminal, marking sections in a session, or just showing it off:
 
 ```bash
-source ~/.bashrc   # Linux
-source ~/.zshrc    # macOS
+text2ascii --show
 ```
+
+No arguments needed. It replays your saved default banner with all the original options (font, color, unicode, etc.). The default is stored in:
+
+- **Windows:** `%APPDATA%\text2ascii\default.json`
+- **macOS / Linux:** `~/.config/text2ascii/default.json`
+
+To change your default, just run `--persistent` again with your new settings.
 
 ---
 
@@ -169,7 +204,9 @@ No install required. Open the site, type your text, pick a style and color, then
 
 - Use **Windows Terminal** for best Unicode (█) support
 - Recommended fonts: **Cascadia Code**, **Consolas**, or **Lucida Console**
-- Git Bash, WSL, and PowerShell 7 all work well
+- Git Bash, WSL, PowerShell 5, and PowerShell 7 all work
+- `--persistent` correctly handles **OneDrive-redirected Documents folders** by querying PowerShell directly for `$PROFILE` rather than assuming a fixed path
+- Integrated terminals in **Cursor, VS Code, and JetBrains** are fully supported
 
 ---
 
